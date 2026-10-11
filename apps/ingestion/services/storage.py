@@ -36,3 +36,11 @@ def save_private_file(file_obj, storage_key: str) -> str:
     file_obj.seek(0)
 
     return str(destination)
+
+
+def delete_private_file(storage_path: str) -> None:
+    """Delete a privately stored file if it exists."""
+    path = Path(storage_path)
+
+    if path.exists() and path.is_file():
+        path.unlink()

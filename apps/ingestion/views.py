@@ -26,25 +26,29 @@ def upload_source_file(request):
             checksum = calculate_sha256(uploaded_file)
             storage_key = generate_storage_key(extension)
 
-            with transaction.atomic():
-                storage_path = save_private_file(
-                    uploaded_file,
-                    storage_key,
-                )
+            storage_path = save_private_file(
+                uploaded_file,
+                storage_key,
+            )
 
-                SourceFile.objects.create(
-                    workspace=workspace,
-                    owner=request.user,
-                    original_name=uploaded_file.name,
-                    storage_key=storage_key,
-                    storage_path=storage_path,
-                    extension=extension,
-                    detected_type=uploaded_file.content_type
-                    or "application/octet-stream",
-                    byte_size=uploaded_file.size,
-                    checksum=checksum,
-                    extraction_status=SourceFile.ExtractionStatus.PENDING,
-                )
+            try:
+                with transaction.atomic():
+                    SourceFile.objects.create(
+                        workspace=workspace,
+                        owner=request.user,
+                        original_name=uploaded_file.name,
+                        storage_key=storage_key,
+                        storage_path=storage_path,
+                        extension=extension,
+                        detected_type=uploaded_file.content_type
+                        or "application/octet-stream",
+                        byte_size=uploaded_file.size,
+                        checksum=checksum,
+                        extraction_status=SourceFile.ExtractionStatus.PENDING,
+                    )
+            except Exception:
+                delete_private_file(storage_path)
+                raise
 
             return redirect("ingestion:upload")
 

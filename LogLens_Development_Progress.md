@@ -894,3 +894,101 @@ The LogLens foundation was continued and the Django application structure was va
 
   ```text
   ModuleNotFoundError: No module named 'accounts'
+
+  ## 2026-10-11 — Ingestion Validation and Upload Workflow
+
+### Completed
+- Added private media storage configuration using `PRIVATE_MEDIA_ROOT`.
+- Created the private upload directory:
+  - `private_media/`
+  - `private_media/uploads/`
+- Implemented the ingestion storage service in `apps/ingestion/services/storage.py`.
+- Added generated private storage keys using UUIDs instead of user-controlled filenames.
+- Added SHA-256 checksum calculation for uploaded files.
+- Added private file-saving functionality under `PRIVATE_MEDIA_ROOT`.
+- Implemented upload validation in `apps/ingestion/services/validators.py`.
+- Added an allowlist for:
+  - `.log`
+  - `.txt`
+  - `.pdf`
+  - `.docx`
+  - `.doc`
+- Added a 25 MB maximum upload-size validation.
+- Added basic file-signature validation for PDF, DOCX, and legacy DOC files.
+- Added UTF-8 validation for `.log` and `.txt` files.
+- Added 14 unit tests covering extension, size, signature, and text validation.
+- All 14 validator tests pass successfully.
+- Created `apps/ingestion/forms.py`.
+- Implemented `SourceFileUploadForm`.
+- Restricted workspace selection to workspaces owned by the authenticated user.
+- Connected extension, size, and content validation to the upload form.
+- Implemented the initial `upload_source_file` Django view.
+- Connected the upload view to:
+  - upload validation
+  - SHA-256 checksum generation
+  - generated storage keys
+  - private file storage
+  - `SourceFile` creation
+  - `PENDING` extraction status
+- Added server-side authentication protection to the upload view.
+- Used a database transaction around the initial file/database creation workflow.
+
+### Verification
+- `python manage.py check` passed.
+- Validator test suite passed:
+  - 14 tests
+  - 14 passed
+  - 0 failures
+
+### Current State
+The ingestion pipeline now has the foundation for accepting and privately storing validated uploads. The upload form and view have been implemented, but the upload workflow has **not yet been connected to URL routing or the browser UI**.
+
+### Next Task
+Continue the upload workflow by:
+1. Adding the ingestion URL configuration.
+2. Connecting it to the project-level URL configuration.
+3. Creating the Django upload template.
+4. Testing the complete browser-based upload flow.
+5. Verifying the resulting `SourceFile` database record and private stored file.
+
+### Important Technical Note
+The current implementation uses a filesystem write together with a database transaction. Filesystem writes are not automatically rolled back by a database transaction. This should be hardened later so failed database operations do not leave orphaned uploaded files.
+
+### Pause Point
+The next session should begin with URL routing for `upload_source_file`. Do not start extraction/Celery implementation yet.
+
+## 2026-10-11 — Private Upload Workflow Verification and Hardening
+
+### Work Completed
+
+- Added `delete_private_file()` to the ingestion storage service.
+- Hardened the upload workflow so that a privately stored file can be removed if the corresponding database transaction fails.
+- Verified Django configuration with:
+  - `python manage.py check`
+  - Result: no system-check issues.
+- Re-ran the ingestion upload validation test suite:
+  - 14 tests discovered.
+  - 14 tests passed.
+  - Result: `OK`.
+- Performed an additional browser-based upload test using `test.txt`.
+- Verified the PostgreSQL `ingestion_sourcefile` table now contains two successful upload records:
+  - `2667105 CIA 1 C2 (1).pdf`
+  - `test.txt`
+- Verified uploaded files receive generated private storage keys rather than retaining their original filenames.
+- Verified both uploaded records are associated with owner `1` and workspace `1`.
+- Verified both files currently have `extraction_status = pending`, which is expected because the document extraction pipeline has not yet been implemented.
+
+### Current State
+
+The private upload foundation is operational and validated. File metadata is being persisted correctly in PostgreSQL, while uploaded files are stored under the private media directory using generated storage keys.
+
+### Next Task
+
+Implement and test the private storage service itself, covering:
+
+1. Storage-key generation.
+2. SHA-256 checksum calculation.
+3. Private file saving.
+4. Private file deletion.
+
+After storage-service tests are complete, proceed to the document/text extraction layer.
