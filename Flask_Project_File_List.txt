@@ -1,0 +1,85 @@
+﻿FLASK PROJECT FILE INVENTORY
+============================
+
+Project Root: C:\Mtech\Advanced Algorithm\CIA III\Component 1\LogLens
+Generated: 2026-10-11 22:16:59
+
+Files
+-----
+1. .env.example
+2. .gitignore
+3. apps\__init__.py
+4. apps\accounts\__init__.py
+5. apps\accounts\admin.py
+6. apps\accounts\apps.py
+7. apps\accounts\models.py
+8. apps\accounts\tests.py
+9. apps\accounts\views.py
+10. apps\benchmarks\__init__.py
+11. apps\benchmarks\admin.py
+12. apps\benchmarks\apps.py
+13. apps\benchmarks\models.py
+14. apps\benchmarks\tests.py
+15. apps\benchmarks\views.py
+16. apps\ingestion\__init__.py
+17. apps\ingestion\admin.py
+18. apps\ingestion\apps.py
+19. apps\ingestion\forms.py
+20. apps\ingestion\migrations\__init__.py
+21. apps\ingestion\migrations\0001_initial.py
+22. apps\ingestion\migrations\0002_textsegment.py
+23. apps\ingestion\models.py
+24. apps\ingestion\services\__init__.py
+25. apps\ingestion\services\extraction.py
+26. apps\ingestion\services\extractors.py
+27. apps\ingestion\services\storage.py
+28. apps\ingestion\services\validators.py
+29. apps\ingestion\tests.py
+30. apps\ingestion\tests\__init__.py
+31. apps\ingestion\tests\test_extraction.py
+32. apps\ingestion\tests\test_extractors.py
+33. apps\ingestion\tests\test_storage.py
+34. apps\ingestion\tests\test_validators.py
+35. apps\ingestion\urls.py
+36. apps\ingestion\views.py
+37. apps\reports\__init__.py
+38. apps\reports\admin.py
+39. apps\reports\apps.py
+40. apps\reports\models.py
+41. apps\reports\tests.py
+42. apps\reports\views.py
+43. apps\search\__init__.py
+44. apps\search\admin.py
+45. apps\search\apps.py
+46. apps\search\models.py
+47. apps\search\tests.py
+48. apps\search\views.py
+49. apps\workspaces\__init__.py
+50. apps\workspaces\admin.py
+51. apps\workspaces\apps.py
+52. apps\workspaces\migrations\__init__.py
+53. apps\workspaces\migrations\0001_initial.py
+54. apps\workspaces\models.py
+55. apps\workspaces\tests.py
+56. apps\workspaces\views.py
+57. compose.yaml
+58. config\__init__.py
+59. config\asgi.py
+60. config\settings.py
+61. config\urls.py
+62. config\wsgi.py
+63. LogLens_Current_State.txt
+64. LogLens_Development_Progress.md
+65. manage.py
+66. pause-loglens.ps1
+67. private_media\uploads\80eb312ae80e4869bbb8954333e03bb8.txt
+68. private_media\uploads\a5c6b3b590e64351a00f35253071a990.pdf
+69. requirements.txt
+70. requirements-dev.txt
+71. resume-loglens.ps1
+72. templates\ingestion\upload.html
+73. test.txt
+74. tree.txt
+
+----------------------------
+Total files: 74
