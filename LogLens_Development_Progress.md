@@ -992,3 +992,48 @@ Implement and test the private storage service itself, covering:
 4. Private file deletion.
 
 After storage-service tests are complete, proceed to the document/text extraction layer.
+
+## 2026-10-11 — Benchmark Reproducibility Metadata
+
+### Completed
+- Extended `BenchmarkRun` with reproducibility metadata:
+  - source file reference
+  - source checksum
+  - benchmark input checksum
+  - source-file benchmark index
+- Extended `AlgorithmMetric` with algorithm implementation version.
+- Added SHA-256 calculation for the exact in-memory benchmark corpus.
+- Updated benchmark persistence to record source and input checksums.
+- Updated source-file benchmarking to associate benchmark runs with their originating `SourceFile`.
+- Added persistence of algorithm versions for Naive, KMP, and Rabin-Karp.
+- Added database migration for the new benchmark metadata fields and indexes.
+- Added tests covering:
+  - benchmark input checksum generation
+  - source checksum persistence
+  - algorithm version persistence
+- Verified Django system checks successfully.
+
+### Verification
+- Full Django test suite: **94/94 tests passing**
+- Result: `OK`
+- Django system check: **0 issues**
+
+### Current Architecture
+```text
+Upload
+  ↓
+Private Storage
+  ↓
+Extraction
+  ↓
+TextSegment
+  ↓
+In-memory Corpus
+  ↓
+Naive / KMP / Rabin-Karp
+  ↓
+BenchmarkResult
+  ↓
+BenchmarkRun + AlgorithmMetric
+  ↓
+PostgreSQL
