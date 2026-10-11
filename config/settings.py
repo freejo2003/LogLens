@@ -136,3 +136,5 @@ MAILERS = {
         'BACKEND': 'django.core.mail.backends.console.EmailBackend',
     },
 }
+
+PRIVATE_MEDIA_ROOT = BASE_DIR / "private_media"
