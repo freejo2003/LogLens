@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1"
+    >
+
+    <title>LogLens — Benchmark</title>
+
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+        rel="stylesheet"
+    >
+</head>
+
+<body class="bg-light">
+
+<nav class="navbar navbar-dark bg-dark">
+    <div class="container">
+        <span class="navbar-brand">
+            LogLens
+        </span>
+
+        <span class="navbar-text text-light">
+            Benchmark Workspace
+        </span>
+    </div>
+</nav>
+
+<main class="container py-4">
+
+    <div class="mb-4">
+        <h1 class="h2">
+            Algorithm Benchmark
+        </h1>
+
+        <p class="text-secondary mb-0">
+            Compare Naive, Knuth-Morris-Pratt, and Rabin-Karp
+            on the same extracted source text.
+        </p>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+
+            <h2 class="h5 mb-3">
+                Benchmark configuration
+            </h2>
+
+            {% if form.non_field_errors %}
+                <div
+                    class="alert alert-danger"
+                    role="alert"
+                >
+                    {% for error in form.non_field_errors %}
+                        <div>{{ error }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <form method="post">
+                {% csrf_token %}
+
+                <div class="row g-3">
+
+                    <div class="col-md-6">
+                        <label
+                            for="{{ form.workspace.id_for_label }}"
+                            class="form-label"
+                        >
+                            Workspace
+                        </label>
+
+                        {{ form.workspace }}
+
+                        {% for error in form.workspace.errors %}
+                            <div class="text-danger small mt-1">
+                                {{ error }}
+                            </div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="col-md-6">
+                        <label
+                            for="{{ form.source_file.id_for_label }}"
+                            class="form-label"
+                        >
+                            Source file
+                        </label>
+
+                        {{ form.source_file }}
+
+                        {% for error in form.source_file.errors %}
+                            <div class="text-danger small mt-1">
+                                {{ error }}
+                            </div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="col-12">
+                        <label
+                            for="{{ form.pattern.id_for_label }}"
+                            class="form-label"
+                        >
+                            Literal pattern
+                        </label>
+
+                        {{ form.pattern }}
+
+                        <div class="form-text">
+                            Matching is currently literal and
+                            case-sensitive.
+                        </div>
+
+                        {% for error in form.pattern.errors %}
+                            <div class="text-danger small mt-1">
+                                {{ error }}
+                            </div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="col-12">
+                        <button
+                            type="submit"
+                            class="btn btn-primary"
+                        >
+                            Run Benchmark
+                        </button>
+                    </div>
+
+                </div>
+            </form>
+
+        </div>
+    </div>
+
+    {% if benchmark %}
+
+        <div class="card shadow-sm mb-4">
+
+            <div class="card-body">
+
+                <div
+                    class="d-flex justify-content-between
+                           align-items-start mb-3"
+                >
+
+                    <div>
+                        <h2 class="h5 mb-1">
+                            Benchmark #{{ benchmark.id }}
+                        </h2>
+
+                        <p class="text-secondary mb-0">
+                            Pattern:
+                            <code>{{ benchmark.pattern }}</code>
+                        </p>
+                    </div>
+
+                    {% if benchmark.positions_consistent %}
+                        <span class="badge text-bg-success">
+                            Positions consistent
+                        </span>
+                    {% else %}
+                        <span class="badge text-bg-danger">
+                            Positions inconsistent
+                        </span>
+                    {% endif %}
+
+                </div>
+
+                <div class="table-responsive">
+
+                    <table
+                        class="table table-bordered
+                               table-hover align-middle"
+                    >
+
+                        <thead class="table-light">
+                            <tr>
+                                <th>Algorithm</th>
+                                <th>Version</th>
+                                <th>Time (seconds)</th>
+                                <th>Matches</th>
+                                <th>Positions</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+
+                            {% for metric in metrics %}
+
+                                <tr>
+
+                                    <td>
+                                        <strong>
+                                            {{ metric.algorithm }}
+                                        </strong>
+                                    </td>
+
+                                    <td>
+                                        {{ metric.algorithm_version }}
+                                    </td>
+
+                                    <td>
+                                        {{ metric.elapsed_seconds|floatformat:8 }}
+                                    </td>
+
+                                    <td>
+                                        {{ metric.match_count }}
+                                    </td>
+
+                                    <td>
+                                        <code>
+                                            {{ metric.positions }}
+                                        </code>
+                                    </td>
+
+                                </tr>
+
+                            {% empty %}
+
+                                <tr>
+                                    <td
+                                        colspan="5"
+                                        class="text-center
+                                               text-secondary"
+                                    >
+                                        No algorithm metrics were
+                                        persisted.
+                                    </td>
+                                </tr>
+
+                            {% endfor %}
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="card shadow-sm">
+
+            <div class="card-body">
+
+                <h2 class="h5 mb-3">
+                    Benchmark metadata
+                </h2>
+
+                <dl class="row mb-0">
+
+                    <dt class="col-sm-4">
+                        Workspace
+                    </dt>
+
+                    <dd class="col-sm-8">
+                        {{ benchmark.workspace.name }}
+                    </dd>
+
+
+                    <dt class="col-sm-4">
+                        Source file
+                    </dt>
+
+                    <dd class="col-sm-8">
+
+                        {% if benchmark.source_file %}
+                            {{ benchmark.source_file.original_name }}
+                        {% else %}
+                            In-memory corpus
+                        {% endif %}
+
+                    </dd>
+
+
+                    <dt class="col-sm-4">
+                        Pattern
+                    </dt>
+
+                    <dd class="col-sm-8">
+                        <code>
+                            {{ benchmark.pattern }}
+                        </code>
+                    </dd>
+
+
+                    <dt class="col-sm-4">
+                        Text length
+                    </dt>
+
+                    <dd class="col-sm-8">
+                        {{ benchmark.text_length }}
+                        characters
+                    </dd>
+
+
+                    <dt class="col-sm-4">
+                        Input SHA-256
+                    </dt>
+
+                    <dd class="col-sm-8">
+                        <code class="text-break">
+                            {{ benchmark.input_checksum }}
+                        </code>
+                    </dd>
+
+
+                    <dt class="col-sm-4">
+                        Source SHA-256
+                    </dt>
+
+                    <dd class="col-sm-8">
+
+                        {% if benchmark.source_checksum %}
+                            <code class="text-break">
+                                {{ benchmark.source_checksum }}
+                            </code>
+                        {% else %}
+                            —
+                        {% endif %}
+
+                    </dd>
+
+
+                    <dt class="col-sm-4">
+                        Status
+                    </dt>
+
+                    <dd class="col-sm-8">
+                        {{ benchmark.get_status_display }}
+                    </dd>
+
+
+                    <dt class="col-sm-4">
+                        Created
+                    </dt>
+
+                    <dd class="col-sm-8">
+                        {{ benchmark.created_at }}
+                    </dd>
+
+
+                    <dt class="col-sm-4">
+                        Completed
+                    </dt>
+
+                    <dd class="col-sm-8">
+                        {{ benchmark.completed_at }}
+                    </dd>
+
+                </dl>
+
+            </div>
+
+        </div>
+
+    {% endif %}
+
+</main>
+
+<script>
+    document
+        .querySelectorAll("select")
+        .forEach(function (select) {
+            select.classList.add("form-select");
+        });
+
+    document
+        .querySelectorAll("input[type='text']")
+        .forEach(function (input) {
+            input.classList.add("form-control");
+        });
+</script>
+
+</body>
+</html>

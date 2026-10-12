@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>LogLens Search</title>
+
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+        rel="stylesheet"
+    >
+</head>
+
+<body class="bg-light">
+
+<nav class="navbar navbar-dark bg-dark">
+    <div class="container">
+        <a class="navbar-brand" href="/search/">LogLens</a>
+
+        <div class="d-flex gap-3">
+            <a class="text-white text-decoration-none"
+               href="/search/">
+                Search
+            </a>
+
+            <a class="text-white text-decoration-none"
+               href="/benchmarks/">
+                Benchmark
+            </a>
+
+            <form method="post" action="/accounts/logout/">
+                {% csrf_token %}
+                <button
+                    type="submit"
+                    class="btn btn-outline-light btn-sm"
+                >
+                    Logout
+                </button>
+            </form>
+        </div>
+    </div>
+</nav>
+
+<main class="container py-4">
+
+    <div class="mb-4">
+        <h1>Search</h1>
+        <p class="text-muted">
+            Search extracted source text using a selected string-matching
+            algorithm.
+        </p>
+    </div>
+
+    {% if form.non_field_errors %}
+        <div class="alert alert-danger">
+            {% for error in form.non_field_errors %}
+                <div>{{ error }}</div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+
+            <form method="post">
+                {% csrf_token %}
+
+                <div class="mb-3">
+                    <label
+                        for="{{ form.workspace.id_for_label }}"
+                        class="form-label"
+                    >
+                        {{ form.workspace.label }}
+                    </label>
+
+                    {{ form.workspace }}
+
+                    {% for error in form.workspace.errors %}
+                        <div class="text-danger small mt-1">
+                            {{ error }}
+                        </div>
+                    {% endfor %}
+                </div>
+
+                <div class="mb-3">
+                    <label
+                        for="{{ form.source_file.id_for_label }}"
+                        class="form-label"
+                    >
+                        {{ form.source_file.label }}
+                    </label>
+
+                    {{ form.source_file }}
+
+                    {% for error in form.source_file.errors %}
+                        <div class="text-danger small mt-1">
+                            {{ error }}
+                        </div>
+                    {% endfor %}
+                </div>
+
+                <div class="mb-3">
+                    <label
+                        for="{{ form.pattern.id_for_label }}"
+                        class="form-label"
+                    >
+                        {{ form.pattern.label }}
+                    </label>
+
+                    {{ form.pattern }}
+
+                    {% for error in form.pattern.errors %}
+                        <div class="text-danger small mt-1">
+                            {{ error }}
+                        </div>
+                    {% endfor %}
+                </div>
+
+                <div class="mb-3">
+                    <label
+                        for="{{ form.algorithm.id_for_label }}"
+                        class="form-label"
+                    >
+                        {{ form.algorithm.label }}
+                    </label>
+
+                    {{ form.algorithm }}
+
+                    {% for error in form.algorithm.errors %}
+                        <div class="text-danger small mt-1">
+                            {{ error }}
+                        </div>
+                    {% endfor %}
+                </div>
+
+                <button
+                    type="submit"
+                    class="btn btn-primary"
+                >
+                    Search
+                </button>
+
+            </form>
+
+        </div>
+    </div>
+
+
+    {% if search_run %}
+
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+
+                <h2 class="h4">Search Summary</h2>
+
+                <div class="row">
+
+                    <div class="col-md-4">
+                        <strong>Pattern</strong>
+                        <div>{{ search_run.pattern }}</div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <strong>Algorithm</strong>
+                        <div>{{ search_run.algorithm }}</div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <strong>Total Matches</strong>
+                        <div>{{ search_run.total_match_count }}</div>
+                    </div>
+
+                </div>
+
+                <hr>
+
+                <div class="row">
+
+                    <div class="col-md-6">
+                        <strong>Source File</strong>
+                        <div>
+                            {{ search_run.source_file.original_name }}
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <strong>Status</strong>
+                        <div>
+                            <span class="badge text-bg-success">
+                                {{ search_run.get_status_display }}
+                            </span>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+        </div>
+
+
+        <div class="card shadow-sm">
+
+            <div class="card-body">
+
+                <h2 class="h4 mb-3">Matches</h2>
+
+                {% if match_results %}
+
+                    <div class="table-responsive">
+
+                        <table class="table table-bordered table-striped">
+
+                            <thead>
+                                <tr>
+                                    <th>Segment</th>
+                                    <th>Location</th>
+                                    <th>Matches</th>
+                                    <th>Positions</th>
+                                    <th>Extracted Text</th>
+                                </tr>
+                            </thead>
+
+                            <tbody>
+
+                                {% for result in match_results %}
+
+                                    <tr>
+
+                                        <td>
+                                            {{ result.segment.sequence }}
+                                        </td>
+
+                                        <td>
+
+                                            {% if result.segment.page_number %}
+                                                Page:
+                                                {{ result.segment.page_number }}
+                                                <br>
+                                            {% endif %}
+
+                                            {% if result.segment.paragraph_number %}
+                                                Paragraph:
+                                                {{ result.segment.paragraph_number }}
+                                                <br>
+                                            {% endif %}
+
+                                            {% if result.segment.line_number %}
+                                                Line:
+                                                {{ result.segment.line_number }}
+                                                <br>
+                                            {% endif %}
+
+                                            Segment:
+                                            {{ result.segment.sequence }}
+
+                                        </td>
+
+                                        <td>
+                                            {{ result.match_count }}
+                                        </td>
+
+                                        <td>
+                                            {{ result.positions|join:", " }}
+                                        </td>
+
+                                        <td>
+                                            <pre class="mb-0"
+                                                 style="white-space: pre-wrap;">{{ result.segment.text }}</pre>
+                                        </td>
+
+                                    </tr>
+
+                                {% endfor %}
+
+                            </tbody>
+
+                        </table>
+
+                    </div>
+
+                {% else %}
+
+                    <div class="alert alert-secondary mb-0">
+                        No matches were found.
+                    </div>
+
+                {% endif %}
+
+            </div>
+
+        </div>
+
+    {% endif %}
+
+</main>
+
+</body>
+</html>

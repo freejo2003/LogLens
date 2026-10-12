@@ -138,3 +138,6 @@ MAILERS = {
 }
 
 PRIVATE_MEDIA_ROOT = BASE_DIR / "private_media"
+LOGIN_URL = "/accounts/login/"
+LOGIN_REDIRECT_URL = "/benchmarks/"
+LOGOUT_REDIRECT_URL = "/accounts/login/"

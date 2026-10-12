@@ -1037,3 +1037,77 @@ BenchmarkResult
 BenchmarkRun + AlgorithmMetric
   ↓
 PostgreSQL
+
+## 2026-10-12 — Search Workflow and Persistence
+
+### Completed
+- Added persistent `SearchRun` model for authenticated search execution history.
+- Added persistent `MatchResult` model for storing algorithm match positions and source segments.
+- Added search persistence service connecting the existing search engine to PostgreSQL.
+- Added ownership and workspace validation to the search persistence workflow.
+- Added authenticated `/search/` workflow.
+- Added workspace selection restricted to the authenticated user's workspaces.
+- Added source-file selection restricted to the user's successfully extracted source files.
+- Added literal pattern validation.
+- Added algorithm selection for:
+  - Naive
+  - KMP
+  - Rabin-Karp
+- Added server-side validation preventing source files from being used with unrelated workspaces.
+- Added search results UI showing:
+  - pattern
+  - selected algorithm
+  - total match count
+  - source file
+  - search status
+  - segment number
+  - page/paragraph/line location when available
+  - match positions
+  - extracted source text
+- Added search workflow tests covering:
+  - anonymous-user authentication protection
+  - authenticated search-page access
+  - successful search execution
+  - other-user source-file rejection
+  - other-user workspace rejection
+  - workspace/source mismatch
+  - empty-pattern rejection
+  - invalid-algorithm rejection
+- Created and applied the SearchRun/MatchResult database migration.
+
+### Verification
+- Search workflow tests: **8/8 passed**.
+- Complete Django test suite: **108/108 passed**.
+- Django system check: **passed with 0 issues**.
+- Test database creation and destruction: successful.
+
+### Current Product Capability
+LogLens now provides two distinct algorithm workflows:
+
+1. **Search**
+   - Executes Naive, KMP, or Rabin-Karp against extracted source text.
+   - Persists search execution and match results.
+   - Provides source-level match locations.
+
+2. **Benchmark**
+   - Executes all three algorithms against the same in-memory corpus.
+   - Persists benchmark metadata and algorithm metrics.
+   - Displays execution-time and consistency information.
+
+### Current Pipeline
+Upload → Private Storage → Extraction → TextSegment → Search/Benchmark → Naive/KMP/Rabin-Karp → PostgreSQL Persistence → Authenticated UI
+
+### Project Status
+Core MVP implementation is approximately **55–60% complete** based on the current PRD implementation scope.
+
+### Next Development Unit
+Continue the remaining product workflows, with likely next areas:
+- Search history / saved searches
+- Configurable indicators and pattern rules
+- Recurring error grouping
+- Reports
+- Celery + Redis asynchronous processing
+- Audit events and retention/deletion workflows
+- Benchmark methodology hardening
+- Final security hardening
+- Release/deployment preparation
