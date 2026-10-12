@@ -1,75 +1,63 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+{% extends "base.html" %}
 
-    <title>LogLens Search</title>
+{% block title %}Search{% endblock %}
 
-    <link
-        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
-        rel="stylesheet"
-    >
-</head>
+{% block page_title %}Search{% endblock %}
 
-<body class="bg-light">
+{% block page_subtitle %}
+Run literal pattern searches against extracted log and document text.
+{% endblock %}
 
-<nav class="navbar navbar-dark bg-dark">
-    <div class="container">
-        <a class="navbar-brand" href="/search/">LogLens</a>
+{% block content %}
 
-        <div class="d-flex gap-3">
-            <a class="text-white text-decoration-none"
-               href="/search/">
-                Search
-            </a>
+<!-- Search Workspace -->
+<div class="card border-0 shadow-sm mb-4">
 
-            <a class="text-white text-decoration-none"
-               href="/benchmarks/">
-                Benchmark
-            </a>
+    <div class="card-body p-4">
 
-            <form method="post" action="/accounts/logout/">
-                {% csrf_token %}
-                <button
-                    type="submit"
-                    class="btn btn-outline-light btn-sm"
-                >
-                    Logout
-                </button>
-            </form>
+        <div class="d-flex align-items-start gap-3 mb-4">
+
+            <div class="rounded-3 bg-primary-subtle text-primary p-3">
+                <i class="bi bi-search fs-4"></i>
+            </div>
+
+            <div>
+                <h5 class="fw-semibold mb-1">
+                    Search Workspace
+                </h5>
+
+                <p class="text-muted small mb-0">
+                    Select an extracted source file, enter a literal pattern,
+                    and choose the string-matching algorithm.
+                </p>
+            </div>
+
         </div>
-    </div>
-</nav>
 
-<main class="container py-4">
+        {% if form.non_field_errors %}
 
-    <div class="mb-4">
-        <h1>Search</h1>
-        <p class="text-muted">
-            Search extracted source text using a selected string-matching
-            algorithm.
-        </p>
-    </div>
+            <div class="alert alert-danger">
 
-    {% if form.non_field_errors %}
-        <div class="alert alert-danger">
-            {% for error in form.non_field_errors %}
-                <div>{{ error }}</div>
-            {% endfor %}
-        </div>
-    {% endif %}
+                {% for error in form.non_field_errors %}
+                    <div>{{ error }}</div>
+                {% endfor %}
 
-    <div class="card shadow-sm mb-4">
-        <div class="card-body">
+            </div>
 
-            <form method="post">
-                {% csrf_token %}
+        {% endif %}
 
-                <div class="mb-3">
+        <form method="post">
+
+            {% csrf_token %}
+
+            <div class="row g-3">
+
+                <!-- Workspace -->
+                <div class="col-lg-6">
+
                     <label
                         for="{{ form.workspace.id_for_label }}"
-                        class="form-label"
+                        class="form-label fw-medium"
                     >
                         {{ form.workspace.label }}
                     </label>
@@ -81,208 +69,422 @@
                             {{ error }}
                         </div>
                     {% endfor %}
+
                 </div>
 
-                <div class="mb-3">
+                <!-- Source File -->
+                <div class="col-lg-6">
+
                     <label
                         for="{{ form.source_file.id_for_label }}"
-                        class="form-label"
+                        class="form-label fw-medium"
                     >
                         {{ form.source_file.label }}
                     </label>
 
                     {{ form.source_file }}
 
+                    <div class="form-text">
+                        Only successfully extracted files are available.
+                    </div>
+
                     {% for error in form.source_file.errors %}
                         <div class="text-danger small mt-1">
                             {{ error }}
                         </div>
                     {% endfor %}
+
                 </div>
 
-                <div class="mb-3">
+                <!-- Pattern -->
+                <div class="col-lg-8">
+
                     <label
                         for="{{ form.pattern.id_for_label }}"
-                        class="form-label"
+                        class="form-label fw-medium"
                     >
                         {{ form.pattern.label }}
                     </label>
 
                     {{ form.pattern }}
 
+                    <div class="form-text">
+                        Matching is performed against the extracted text.
+                    </div>
+
                     {% for error in form.pattern.errors %}
                         <div class="text-danger small mt-1">
                             {{ error }}
                         </div>
                     {% endfor %}
+
                 </div>
 
-                <div class="mb-3">
+                <!-- Algorithm -->
+                <div class="col-lg-4">
+
                     <label
                         for="{{ form.algorithm.id_for_label }}"
-                        class="form-label"
+                        class="form-label fw-medium"
                     >
                         {{ form.algorithm.label }}
                     </label>
 
                     {{ form.algorithm }}
 
+                    <div class="form-text">
+                        Choose Naive, KMP, or Rabin-Karp.
+                    </div>
+
                     {% for error in form.algorithm.errors %}
                         <div class="text-danger small mt-1">
                             {{ error }}
                         </div>
                     {% endfor %}
-                </div>
-
-                <button
-                    type="submit"
-                    class="btn btn-primary"
-                >
-                    Search
-                </button>
-
-            </form>
-
-        </div>
-    </div>
-
-
-    {% if search_run %}
-
-        <div class="card shadow-sm mb-4">
-            <div class="card-body">
-
-                <h2 class="h4">Search Summary</h2>
-
-                <div class="row">
-
-                    <div class="col-md-4">
-                        <strong>Pattern</strong>
-                        <div>{{ search_run.pattern }}</div>
-                    </div>
-
-                    <div class="col-md-4">
-                        <strong>Algorithm</strong>
-                        <div>{{ search_run.algorithm }}</div>
-                    </div>
-
-                    <div class="col-md-4">
-                        <strong>Total Matches</strong>
-                        <div>{{ search_run.total_match_count }}</div>
-                    </div>
-
-                </div>
-
-                <hr>
-
-                <div class="row">
-
-                    <div class="col-md-6">
-                        <strong>Source File</strong>
-                        <div>
-                            {{ search_run.source_file.original_name }}
-                        </div>
-                    </div>
-
-                    <div class="col-md-6">
-                        <strong>Status</strong>
-                        <div>
-                            <span class="badge text-bg-success">
-                                {{ search_run.get_status_display }}
-                            </span>
-                        </div>
-                    </div>
 
                 </div>
 
             </div>
-        </div>
+
+            <div class="d-flex justify-content-end mt-4">
+
+                <button
+                    type="submit"
+                    class="btn btn-primary px-4"
+                >
+                    <i class="bi bi-search me-2"></i>
+                    Run Search
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
 
 
-        <div class="card shadow-sm">
+<!-- Search Resources -->
+<div class="row g-4 mb-4">
 
-            <div class="card-body">
+    <!-- Saved Searches -->
+    <div class="col-xl-6">
 
-                <h2 class="h4 mb-3">Matches</h2>
+        <div class="card border-0 shadow-sm h-100">
 
-                {% if match_results %}
+            <div class="card-body p-4">
 
-                    <div class="table-responsive">
+                <div class="d-flex justify-content-between align-items-center mb-3">
 
-                        <table class="table table-bordered table-striped">
+                    <div>
 
-                            <thead>
-                                <tr>
-                                    <th>Segment</th>
-                                    <th>Location</th>
-                                    <th>Matches</th>
-                                    <th>Positions</th>
-                                    <th>Extracted Text</th>
-                                </tr>
-                            </thead>
+                        <h5 class="fw-semibold mb-1">
+                            Saved Searches
+                        </h5>
 
-                            <tbody>
+                        <p class="text-muted small mb-0">
+                            Reusable search configurations.
+                        </p>
 
-                                {% for result in match_results %}
+                    </div>
 
-                                    <tr>
+                    <span class="badge text-bg-light border">
+                        {{ saved_searches|length }}
+                    </span>
 
-                                        <td>
-                                            {{ result.segment.sequence }}
-                                        </td>
+                </div>
 
-                                        <td>
 
-                                            {% if result.segment.page_number %}
-                                                Page:
-                                                {{ result.segment.page_number }}
-                                                <br>
-                                            {% endif %}
+                {% if saved_searches %}
 
-                                            {% if result.segment.paragraph_number %}
-                                                Paragraph:
-                                                {{ result.segment.paragraph_number }}
-                                                <br>
-                                            {% endif %}
+                    <div class="list-group list-group-flush">
 
-                                            {% if result.segment.line_number %}
-                                                Line:
-                                                {{ result.segment.line_number }}
-                                                <br>
-                                            {% endif %}
+                        {% for saved in saved_searches %}
 
-                                            Segment:
-                                            {{ result.segment.sequence }}
+                            <div class="list-group-item px-0">
 
-                                        </td>
+                                <div class="d-flex justify-content-between gap-3">
 
-                                        <td>
-                                            {{ result.match_count }}
-                                        </td>
+                                    <div>
 
-                                        <td>
-                                            {{ result.positions|join:", " }}
-                                        </td>
+                                        <div class="fw-semibold">
+                                            {{ saved.name }}
+                                        </div>
 
-                                        <td>
-                                            <pre class="mb-0"
-                                                 style="white-space: pre-wrap;">{{ result.segment.text }}</pre>
-                                        </td>
+                                        <div class="small text-muted mt-1">
 
-                                    </tr>
+                                            <code>{{ saved.pattern }}</code>
 
-                                {% endfor %}
+                                            <span class="mx-1">·</span>
 
-                            </tbody>
+                                            {{ saved.algorithm }}
 
-                        </table>
+                                        </div>
+
+                                        {% if saved.description %}
+
+                                            <div class="small text-muted mt-1">
+                                                {{ saved.description }}
+                                            </div>
+
+                                        {% endif %}
+
+                                    </div>
+
+                                    <span class="badge rounded-pill text-bg-light border align-self-start">
+                                        {{ saved.workspace.name }}
+                                    </span>
+
+                                </div>
+
+                            </div>
+
+                        {% endfor %}
 
                     </div>
 
                 {% else %}
 
-                    <div class="alert alert-secondary mb-0">
-                        No matches were found.
+                    <div class="text-center py-4">
+
+                        <i class="bi bi-bookmark text-muted fs-2"></i>
+
+                        <p class="text-muted small mt-2 mb-0">
+                            No saved searches yet.
+                        </p>
+
+                    </div>
+
+                {% endif %}
+
+
+                <hr class="my-4">
+
+
+                <h6 class="fw-semibold mb-3">
+                    Save a Search
+                </h6>
+
+                <form
+                    method="post"
+                    action="{% url 'search:save' %}"
+                >
+
+                    {% csrf_token %}
+
+                    <div class="mb-2">
+
+                        <select
+                            name="workspace"
+                            class="form-select"
+                            required
+                        >
+
+                            <option value="">
+                                Select workspace
+                            </option>
+
+                            {% for workspace in user.owned_workspaces.all %}
+
+                                <option value="{{ workspace.id }}">
+                                    {{ workspace.name }}
+                                </option>
+
+                            {% endfor %}
+
+                        </select>
+
+                    </div>
+
+                    <div class="mb-2">
+
+                        <input
+                            type="text"
+                            name="name"
+                            class="form-control"
+                            placeholder="Search name"
+                            required
+                        >
+
+                    </div>
+
+                    <div class="mb-2">
+
+                        <input
+                            type="text"
+                            name="pattern"
+                            class="form-control"
+                            placeholder="Literal pattern"
+                            required
+                        >
+
+                    </div>
+
+                    <div class="mb-2">
+
+                        <select
+                            name="algorithm"
+                            class="form-select"
+                            required
+                        >
+
+                            <option value="naive">
+                                Naive
+                            </option>
+
+                            <option value="kmp">
+                                KMP
+                            </option>
+
+                            <option value="rabin_karp">
+                                Rabin-Karp
+                            </option>
+
+                        </select>
+
+                    </div>
+
+                    <div class="mb-3">
+
+                        <textarea
+                            name="description"
+                            class="form-control"
+                            rows="2"
+                            placeholder="Description (optional)"
+                        ></textarea>
+
+                    </div>
+
+                    <button
+                        type="submit"
+                        class="btn btn-outline-primary"
+                    >
+                        <i class="bi bi-bookmark-plus me-2"></i>
+                        Save Search
+                    </button>
+
+                </form>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- Indicators -->
+    <div class="col-xl-6">
+
+        <div class="card border-0 shadow-sm h-100">
+
+            <div class="card-body p-4">
+
+                <div class="d-flex justify-content-between align-items-start mb-3">
+
+                    <div>
+
+                        <h5 class="fw-semibold mb-1">
+                            Indicator Library
+                        </h5>
+
+                        <p class="text-muted small mb-0">
+                            Reusable patterns for recurring log conditions.
+                        </p>
+
+                    </div>
+
+                    <a
+                        href="{% url 'search:indicators' %}"
+                        class="btn btn-sm btn-outline-primary"
+                    >
+                        Manage
+                    </a>
+
+                </div>
+
+
+                {% if indicator_rules %}
+
+                    <div class="list-group list-group-flush">
+
+                        {% for indicator in indicator_rules %}
+
+                            <div class="list-group-item px-0">
+
+                                <div class="d-flex justify-content-between gap-3">
+
+                                    <div>
+
+                                        <div class="fw-semibold">
+                                            {{ indicator.name }}
+                                        </div>
+
+                                        <div class="small mt-1">
+
+                                            <code>
+                                                {{ indicator.pattern }}
+                                            </code>
+
+                                        </div>
+
+                                        {% if indicator.description %}
+
+                                            <div class="small text-muted mt-1">
+                                                {{ indicator.description }}
+                                            </div>
+
+                                        {% endif %}
+
+                                    </div>
+
+                                    <div class="text-end">
+
+                                        {% if indicator.is_active %}
+
+                                            <span class="badge rounded-pill text-bg-success">
+                                                Active
+                                            </span>
+
+                                        {% else %}
+
+                                            <span class="badge rounded-pill text-bg-secondary">
+                                                Inactive
+                                            </span>
+
+                                        {% endif %}
+
+                                        <div class="small text-muted mt-2">
+                                            {{ indicator.workspace.name }}
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                        {% endfor %}
+
+                    </div>
+
+                {% else %}
+
+                    <div class="text-center py-4">
+
+                        <i class="bi bi-funnel text-muted fs-2"></i>
+
+                        <p class="text-muted small mt-2 mb-3">
+                            No indicators have been configured.
+                        </p>
+
+                        <a
+                            href="{% url 'search:indicators' %}"
+                            class="btn btn-sm btn-outline-primary"
+                        >
+                            Create Indicator
+                        </a>
+
                     </div>
 
                 {% endif %}
@@ -291,9 +493,291 @@
 
         </div>
 
-    {% endif %}
+    </div>
 
-</main>
+</div>
 
-</body>
-</html>
+
+{% if search_run %}
+
+    <!-- Search Summary -->
+    <div class="card border-0 shadow-sm mb-4">
+
+        <div class="card-body p-4">
+
+            <div class="d-flex justify-content-between align-items-start mb-4">
+
+                <div>
+
+                    <h5 class="fw-semibold mb-1">
+                        Search Results
+                    </h5>
+
+                    <p class="text-muted small mb-0">
+                        Completed search execution and match summary.
+                    </p>
+
+                </div>
+
+                <span class="badge rounded-pill text-bg-success">
+                    {{ search_run.get_status_display }}
+                </span>
+
+            </div>
+
+
+            <div class="row g-3">
+
+                <div class="col-md-3">
+
+                    <div class="bg-light rounded-3 p-3 h-100">
+
+                        <div class="text-muted small mb-1">
+                            Pattern
+                        </div>
+
+                        <div class="fw-semibold text-break">
+                            <code>{{ search_run.pattern }}</code>
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <div class="col-md-3">
+
+                    <div class="bg-light rounded-3 p-3 h-100">
+
+                        <div class="text-muted small mb-1">
+                            Algorithm
+                        </div>
+
+                        <div class="fw-semibold">
+                            {{ search_run.algorithm }}
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <div class="col-md-3">
+
+                    <div class="bg-light rounded-3 p-3 h-100">
+
+                        <div class="text-muted small mb-1">
+                            Total Matches
+                        </div>
+
+                        <div class="fs-4 fw-semibold">
+                            {{ search_run.total_match_count }}
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <div class="col-md-3">
+
+                    <div class="bg-light rounded-3 p-3 h-100">
+
+                        <div class="text-muted small mb-1">
+                            Source File
+                        </div>
+
+                        <div class="fw-semibold text-break">
+                            {{ search_run.source_file.original_name }}
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- Match Results -->
+    <div class="card border-0 shadow-sm">
+
+        <div class="card-body p-4">
+
+            <div class="d-flex justify-content-between align-items-center mb-4">
+
+                <div>
+
+                    <h5 class="fw-semibold mb-1">
+                        Match Details
+                    </h5>
+
+                    <p class="text-muted small mb-0">
+                        Exact locations returned by the selected matching algorithm.
+                    </p>
+
+                </div>
+
+                <span class="badge text-bg-light border">
+                    {{ match_results|length }} segment{{ match_results|length|pluralize }}
+                </span>
+
+            </div>
+
+
+            {% if match_results %}
+
+                <div class="table-responsive">
+
+                    <table class="table align-middle">
+
+                        <thead>
+
+                            <tr class="small text-muted">
+
+                                <th>
+                                    Segment
+                                </th>
+
+                                <th>
+                                    Location
+                                </th>
+
+                                <th>
+                                    Matches
+                                </th>
+
+                                <th>
+                                    Positions
+                                </th>
+
+                                <th>
+                                    Extracted Text
+                                </th>
+
+                            </tr>
+
+                        </thead>
+
+                        <tbody>
+
+                            {% for result in match_results %}
+
+                                <tr>
+
+                                    <td class="fw-semibold">
+                                        #{{ result.segment.sequence }}
+                                    </td>
+
+                                    <td>
+
+                                        <div class="small">
+
+                                            {% if result.segment.page_number %}
+                                                Page {{ result.segment.page_number }}
+                                            {% endif %}
+
+                                            {% if result.segment.paragraph_number %}
+                                                {% if result.segment.page_number %}<br>{% endif %}
+                                                Paragraph {{ result.segment.paragraph_number }}
+                                            {% endif %}
+
+                                            {% if result.segment.line_number %}
+                                                <br>
+                                                Line {{ result.segment.line_number }}
+                                            {% endif %}
+
+                                        </div>
+
+                                    </td>
+
+                                    <td>
+
+                                        <span class="badge rounded-pill text-bg-primary">
+                                            {{ result.match_count }}
+                                        </span>
+
+                                    </td>
+
+                                    <td>
+
+                                        <code class="small">
+                                            {{ result.positions|join:", " }}
+                                        </code>
+
+                                    </td>
+
+                                    <td style="min-width: 360px;">
+
+                                        <pre
+                                            class="bg-light rounded-3 p-3 mb-0 small"
+                                            style="white-space: pre-wrap; word-break: break-word;"
+                                        >{{ result.segment.text }}</pre>
+
+                                    </td>
+
+                                </tr>
+
+                            {% endfor %}
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            {% else %}
+
+                <div class="text-center py-5">
+
+                    <div class="mb-3 text-muted">
+
+                        <i class="bi bi-search fs-1"></i>
+
+                    </div>
+
+                    <h6 class="fw-semibold">
+                        No matches found
+                    </h6>
+
+                    <p class="text-muted small mb-0">
+                        The selected pattern was not found in the extracted source text.
+                    </p>
+
+                </div>
+
+            {% endif %}
+
+        </div>
+
+    </div>
+
+{% else %}
+
+    <!-- Search Empty State -->
+    <div class="card border-0 shadow-sm">
+
+        <div class="card-body text-center py-5">
+
+            <div class="mb-3 text-muted">
+
+                <i class="bi bi-search fs-1"></i>
+
+            </div>
+
+            <h5 class="fw-semibold">
+                Ready to search
+            </h5>
+
+            <p class="text-muted small mb-0">
+                Select a source file, enter a literal pattern,
+                choose an algorithm, and run the search.
+            </p>
+
+        </div>
+
+    </div>
+
+{% endif %}
+
+{% endblock %}

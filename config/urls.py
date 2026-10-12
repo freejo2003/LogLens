@@ -1,9 +1,20 @@
 from django.contrib import admin
 from django.urls import include, path
 
+from . import views
+
 
 urlpatterns = [
-    path("admin/", admin.site.urls),
+    path(
+        "",
+        views.dashboard,
+        name="dashboard",
+    ),
+
+    path(
+        "admin/",
+        admin.site.urls,
+    ),
 
     path(
         "accounts/",
@@ -19,8 +30,9 @@ urlpatterns = [
         "benchmarks/",
         include("apps.benchmarks.urls"),
     ),
+
     path(
         "search/",
-        include("apps.search.urls")
+        include("apps.search.urls"),
     ),
 ]

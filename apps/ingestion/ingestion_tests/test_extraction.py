@@ -122,3 +122,60 @@ class SourceFileExtractionTests(TestCase):
             self.assertEqual(len(segments), 1)
             self.assertEqual(segments[0].text, "updated content")
             self.assertEqual(segments[0].parser_version, "1.0")
+
+    def test_loglens_test_application_file_extracts_26_segments(self):
+        project_root = Path(__file__).resolve().parents[3]
+        source_path = project_root / "LogLens_Test_Application.log"
+
+        self.assertTrue(
+            source_path.exists(),
+            f"Expected test dataset was not found: {source_path}",
+        )
+
+        source_file = SourceFile.objects.create(
+            workspace=self.workspace,
+            owner=self.user,
+            original_name="LogLens_Test_Application.log",
+            storage_key="uploads/test-application.log",
+            storage_path=str(source_path),
+            extension=".log",
+            detected_type="text/plain",
+            byte_size=source_path.stat().st_size,
+            checksum="test-checksum",
+        )
+
+        segment_count = process_source_file(source_file)
+
+        source_file.refresh_from_db()
+
+        self.assertEqual(segment_count, 26)
+        self.assertEqual(
+            source_file.extraction_status,
+            SourceFile.ExtractionStatus.SUCCEEDED,
+        )
+
+        segments = list(
+            TextSegment.objects.filter(
+                source_file=source_file
+            ).order_by("sequence")
+        )
+
+        self.assertEqual(len(segments), 26)
+        self.assertEqual(
+            [segment.sequence for segment in segments],
+            list(range(1, 27)),
+        )
+        self.assertEqual(
+            [segment.line_number for segment in segments],
+            list(range(1, 27)),
+        )
+
+        self.assertEqual(
+            segments[0].text,
+            "2026-10-12 09:00:01 INFO Application started successfully",
+        )
+
+        self.assertEqual(
+            segments[-1].text,
+            "2026-10-12 09:18:30 INFO Application health check passed",
+        )

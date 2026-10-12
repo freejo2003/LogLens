@@ -1,7 +1,19 @@
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import render
+from django.shortcuts import redirect, render
 
-from apps.search.forms import SearchRunForm
+from apps.search.forms import (
+    IndicatorRuleForm,
+    SavedSearchForm,
+    SearchRunForm,
+)
+from apps.search.services.indicators import (
+    create_indicator_rule,
+    get_indicator_rules_for_user,
+)
+from apps.search.services.saved_searches import (
+    create_saved_search,
+    get_saved_searches_for_user,
+)
 from apps.search.services.search_persistence import create_search_run
 
 
@@ -37,10 +49,7 @@ def search_workspace(request):
                     .order_by("segment__sequence")
                 )
 
-            except PermissionError as exc:
-                form.add_error(None, str(exc))
-
-            except ValueError as exc:
+            except (PermissionError, ValueError) as exc:
                 form.add_error(None, str(exc))
 
     else:
@@ -53,5 +62,73 @@ def search_workspace(request):
             "form": form,
             "search_run": search_run,
             "match_results": match_results,
+            "saved_searches": get_saved_searches_for_user(request.user),
+            "indicator_rules": get_indicator_rules_for_user(request.user),
         },
     )
+
+
+@login_required
+def indicators_workspace(request):
+    form = IndicatorRuleForm(user=request.user)
+
+    return render(
+        request,
+        "search/indicators.html",
+        {
+            "form": form,
+            "indicator_rules": get_indicator_rules_for_user(request.user),
+        },
+    )
+
+
+@login_required
+def save_search(request):
+    if request.method != "POST":
+        return redirect("search:run")
+
+    form = SavedSearchForm(
+        request.POST,
+        user=request.user,
+    )
+
+    if form.is_valid():
+        try:
+            create_saved_search(
+                owner=request.user,
+                workspace=form.cleaned_data["workspace"],
+                name=form.cleaned_data["name"],
+                pattern=form.cleaned_data["pattern"],
+                algorithm=form.cleaned_data["algorithm"],
+                description=form.cleaned_data["description"],
+            )
+        except PermissionError:
+            pass
+
+    return redirect("search:run")
+
+
+@login_required
+def create_indicator(request):
+    if request.method != "POST":
+        return redirect("search:indicators")
+
+    form = IndicatorRuleForm(
+        request.POST,
+        user=request.user,
+    )
+
+    if form.is_valid():
+        try:
+            create_indicator_rule(
+                owner=request.user,
+                workspace=form.cleaned_data["workspace"],
+                name=form.cleaned_data["name"],
+                pattern=form.cleaned_data["pattern"],
+                description=form.cleaned_data["description"],
+                is_active=form.cleaned_data["is_active"],
+            )
+        except PermissionError:
+            pass
+
+    return redirect("search:indicators")

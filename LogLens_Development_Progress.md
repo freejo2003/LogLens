@@ -1111,3 +1111,34 @@ Continue the remaining product workflows, with likely next areas:
 - Benchmark methodology hardening
 - Final security hardening
 - Release/deployment preparation
+
+## 2026-10-12 — Secure Source File Deletion and PRD Review
+
+### Completed
+- Hardened private file deletion so files can only be removed from the configured private media root.
+- Added `delete_source_file()` service with ownership validation and database deletion.
+- Added a POST-only source-file deletion view with authentication and owner-level authorization.
+- Added the ingestion delete URL route.
+- Added a Delete action to the Files page with CSRF protection and browser confirmation.
+- Verified the complete deletion workflow through the UI.
+- Confirmed that source-file deletion removes the stored file and associated extracted text segments.
+- Preserved existing search-history behavior through the `SearchRun.source_file` `SET_NULL` relationship.
+- Ran Django system checks successfully with no issues.
+- Reviewed the current implementation against the LogLens PRD v2.0.
+- Identified the next major development priorities: deterministic error grouping, richer search-result workflows, indicator application, saved-search management, exports, and rigorous benchmark implementation.
+
+### Verification
+- `python manage.py check` — passed.
+- Manual Files-page deletion test — passed.
+- Delete operation is restricted to authenticated owners and uses POST + CSRF protection.
+
+### Current Project Position
+The project has substantially completed the Foundation, Ingestion/Ownership, and core Algorithm Engine stages. Development is now entering the Product Workflow stage.
+
+### Next Recommended Work
+1. Implement deterministic recurring-error grouping.
+2. Improve the search results explorer with context, filtering, and source locators.
+3. Apply indicator rules to search results.
+4. Complete saved-search edit/delete/rerun workflows.
+5. Implement result exports.
+6. Upgrade benchmarking to the PRD's warm-up, repeated-trial, timing-separation, memory, and Rabin-Karp collision/verification requirements.

@@ -4,6 +4,84 @@ from django.db import models
 from apps.workspaces.models import Workspace
 
 
+class IndicatorRule(models.Model):
+    workspace = models.ForeignKey(
+        Workspace,
+        on_delete=models.CASCADE,
+        related_name="indicator_rules",
+    )
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="indicator_rules",
+    )
+    name = models.CharField(max_length=200)
+    pattern = models.TextField()
+    description = models.TextField(blank=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["name"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["workspace", "name"],
+                name="unique_indicator_rule_workspace_name",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["owner", "is_active"]),
+            models.Index(fields=["workspace", "is_active"]),
+        ]
+
+    def __str__(self):
+        return self.name
+
+
+class SavedSearch(models.Model):
+    workspace = models.ForeignKey(
+        Workspace,
+        on_delete=models.CASCADE,
+        related_name="saved_searches",
+    )
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="saved_searches",
+    )
+    source_file = models.ForeignKey(
+        "ingestion.SourceFile",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="saved_searches",
+    )
+    name = models.CharField(max_length=200)
+    pattern = models.TextField()
+    algorithm = models.CharField(max_length=50)
+    description = models.TextField(blank=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["name"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["owner", "name"],
+                name="unique_saved_search_owner_name",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["owner", "is_active"]),
+            models.Index(fields=["workspace", "is_active"]),
+        ]
+
+    def __str__(self):
+        return self.name
+
+
 class SearchRun(models.Model):
     class Status(models.TextChoices):
         SUCCEEDED = "succeeded", "Succeeded"
