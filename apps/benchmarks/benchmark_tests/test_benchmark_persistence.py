@@ -9,7 +9,7 @@ from apps.workspaces.models import Workspace
 
 
 class BenchmarkPersistenceTests(TestCase):
-    
+
     @classmethod
     def setUpTestData(cls):
         User = get_user_model()
@@ -105,6 +105,176 @@ class BenchmarkPersistenceTests(TestCase):
                 0,
             )
 
+    def test_phase_timings_are_persisted(self):
+        benchmark = create_benchmark_run(
+            workspace=self.workspace,
+            owner=self.user,
+            text="ERROR database ERROR",
+            pattern="ERROR",
+        )
+
+        metrics = list(
+            benchmark.algorithm_metrics.order_by("algorithm")
+        )
+
+        self.assertEqual(
+            len(metrics),
+            3,
+        )
+
+        for metric in metrics:
+            self.assertGreaterEqual(
+                metric.preprocessing_seconds,
+                0,
+            )
+
+            self.assertGreaterEqual(
+                metric.search_seconds,
+                0,
+            )
+
+            self.assertGreaterEqual(
+                metric.total_seconds,
+                0,
+            )
+
+            self.assertEqual(
+                metric.elapsed_seconds,
+                metric.total_seconds,
+            )
+
+    def test_phase_trial_timings_are_persisted(self):
+        benchmark = create_benchmark_run(
+            workspace=self.workspace,
+            owner=self.user,
+            text="ERROR database ERROR",
+            pattern="ERROR",
+        )
+
+        metrics = list(
+            benchmark.algorithm_metrics.all()
+        )
+
+        for metric in metrics:
+            self.assertEqual(
+                len(metric.trial_times_seconds),
+                metric.trial_count,
+            )
+
+            self.assertEqual(
+                len(
+                    metric.preprocessing_trial_times_seconds
+                ),
+                metric.trial_count,
+            )
+
+            self.assertEqual(
+                len(
+                    metric.search_trial_times_seconds
+                ),
+                metric.trial_count,
+            )
+
+            self.assertEqual(
+                len(
+                    metric.total_trial_times_seconds
+                ),
+                metric.trial_count,
+            )
+
+    def test_phase_statistics_are_persisted(self):
+        benchmark = create_benchmark_run(
+            workspace=self.workspace,
+            owner=self.user,
+            text="ERROR database ERROR",
+            pattern="ERROR",
+        )
+
+        metrics = list(
+            benchmark.algorithm_metrics.all()
+        )
+
+        for metric in metrics:
+            self.assertLessEqual(
+                metric.preprocessing_minimum_seconds,
+                metric.preprocessing_median_seconds,
+            )
+
+            self.assertLessEqual(
+                metric.preprocessing_median_seconds,
+                metric.preprocessing_maximum_seconds,
+            )
+
+            self.assertLessEqual(
+                metric.search_minimum_seconds,
+                metric.search_median_seconds,
+            )
+
+            self.assertLessEqual(
+                metric.search_median_seconds,
+                metric.search_maximum_seconds,
+            )
+
+            self.assertLessEqual(
+                metric.total_minimum_seconds,
+                metric.total_median_seconds,
+            )
+
+            self.assertLessEqual(
+                metric.total_median_seconds,
+                metric.total_maximum_seconds,
+            )
+
+    def test_rabin_karp_diagnostics_are_persisted(self):
+        benchmark = create_benchmark_run(
+            workspace=self.workspace,
+            owner=self.user,
+            text="ERROR database ERROR",
+            pattern="ERROR",
+        )
+
+        metric = benchmark.algorithm_metrics.get(
+            algorithm="rabin_karp",
+        )
+
+        self.assertEqual(
+            metric.verification_count,
+            2,
+        )
+
+        self.assertEqual(
+            metric.collision_count,
+            0,
+        )
+
+    def test_non_rabin_karp_diagnostics_are_persisted_as_zero(self):
+        benchmark = create_benchmark_run(
+            workspace=self.workspace,
+            owner=self.user,
+            text="ERROR database ERROR",
+            pattern="ERROR",
+        )
+
+        metrics = benchmark.algorithm_metrics.filter(
+            algorithm__in=["naive", "kmp"],
+        )
+
+        self.assertEqual(
+            metrics.count(),
+            2,
+        )
+
+        for metric in metrics:
+            self.assertEqual(
+                metric.verification_count,
+                0,
+            )
+
+            self.assertEqual(
+                metric.collision_count,
+                0,
+            )
+
     def test_metrics_are_unique_per_algorithm(self):
         benchmark = create_benchmark_run(
             workspace=self.workspace,
@@ -135,6 +305,7 @@ class BenchmarkPersistenceTests(TestCase):
                 text="ERROR",
                 pattern="ERROR",
             )
+
     def test_benchmark_stores_input_checksum(self):
         text = "ERROR database ERROR"
 
@@ -194,7 +365,7 @@ class BenchmarkPersistenceTests(TestCase):
             benchmark.source_checksum,
             "d" * 64,
         )
-    
+
     def test_algorithm_versions_are_persisted(self):
         benchmark = create_benchmark_run(
             workspace=self.workspace,

@@ -89,6 +89,199 @@ class BenchmarkEngineTests(SimpleTestCase):
             max(result.trial_times_seconds),
         )
 
+    def test_phase_timing_records_three_phases(self):
+        result = benchmark_algorithm(
+            "kmp",
+            "ERROR database ERROR",
+            "ERROR",
+            warmup_runs=1,
+            trials=5,
+        )
+
+        self.assertGreaterEqual(
+            result.preprocessing_seconds,
+            0,
+        )
+
+        self.assertGreaterEqual(
+            result.search_seconds,
+            0,
+        )
+
+        self.assertGreaterEqual(
+            result.total_seconds,
+            0,
+        )
+
+    def test_phase_timing_records_all_trial_series(self):
+        result = benchmark_algorithm(
+            "kmp",
+            "ERROR database ERROR",
+            "ERROR",
+            warmup_runs=1,
+            trials=5,
+        )
+
+        self.assertEqual(
+            len(result.preprocessing_trial_times_seconds),
+            5,
+        )
+
+        self.assertEqual(
+            len(result.search_trial_times_seconds),
+            5,
+        )
+
+        self.assertEqual(
+            len(result.total_trial_times_seconds),
+            5,
+        )
+
+        for elapsed in result.preprocessing_trial_times_seconds:
+            self.assertGreaterEqual(elapsed, 0)
+
+        for elapsed in result.search_trial_times_seconds:
+            self.assertGreaterEqual(elapsed, 0)
+
+        for elapsed in result.total_trial_times_seconds:
+            self.assertGreaterEqual(elapsed, 0)
+
+    def test_phase_statistics_have_valid_spread(self):
+        result = benchmark_algorithm(
+            "kmp",
+            "ERROR database ERROR",
+            "ERROR",
+            warmup_runs=1,
+            trials=5,
+        )
+
+        self.assertLessEqual(
+            result.preprocessing_minimum_seconds,
+            result.preprocessing_median_seconds,
+        )
+
+        self.assertLessEqual(
+            result.preprocessing_median_seconds,
+            result.preprocessing_maximum_seconds,
+        )
+
+        self.assertLessEqual(
+            result.search_minimum_seconds,
+            result.search_median_seconds,
+        )
+
+        self.assertLessEqual(
+            result.search_median_seconds,
+            result.search_maximum_seconds,
+        )
+
+        self.assertLessEqual(
+            result.total_minimum_seconds,
+            result.total_median_seconds,
+        )
+
+        self.assertLessEqual(
+            result.total_median_seconds,
+            result.total_maximum_seconds,
+        )
+
+    def test_total_timing_is_representative_elapsed_timing(self):
+        result = benchmark_algorithm(
+            "naive",
+            "ERROR database ERROR",
+            "ERROR",
+            warmup_runs=1,
+            trials=5,
+        )
+
+        self.assertEqual(
+            result.elapsed_seconds,
+            result.total_seconds,
+        )
+
+        self.assertEqual(
+            result.median_seconds,
+            result.total_median_seconds,
+        )
+
+        self.assertEqual(
+            result.minimum_seconds,
+            result.total_minimum_seconds,
+        )
+
+        self.assertEqual(
+            result.maximum_seconds,
+            result.total_maximum_seconds,
+        )
+
+    def test_rabin_karp_diagnostics_are_exposed(self):
+        result = benchmark_algorithm(
+            "rabin_karp",
+            "ERROR database ERROR",
+            "ERROR",
+            warmup_runs=1,
+            trials=5,
+        )
+
+        self.assertEqual(
+            result.positions,
+            (0, 15),
+        )
+
+        self.assertEqual(
+            result.match_count,
+            2,
+        )
+
+        self.assertEqual(
+            result.verification_count,
+            2,
+        )
+
+        self.assertEqual(
+            result.collision_count,
+            0,
+        )
+
+    def test_non_rabin_karp_algorithms_have_zero_diagnostics(self):
+        for algorithm in ("naive", "kmp"):
+            result = benchmark_algorithm(
+                algorithm,
+                "ERROR database ERROR",
+                "ERROR",
+                warmup_runs=1,
+                trials=5,
+            )
+
+            self.assertEqual(
+                result.collision_count,
+                0,
+            )
+
+            self.assertEqual(
+                result.verification_count,
+                0,
+            )
+
+    def test_rabin_karp_diagnostics_are_consistent_across_trials(self):
+        result = benchmark_algorithm(
+            "rabin_karp",
+            "ERROR database ERROR",
+            "ERROR",
+            warmup_runs=2,
+            trials=10,
+        )
+
+        self.assertEqual(
+            result.collision_count,
+            0,
+        )
+
+        self.assertEqual(
+            result.verification_count,
+            2,
+        )
+
     def test_benchmark_all_uses_three_algorithms(self):
         result = benchmark_all(
             "ERROR ERROR INFO ERROR",
@@ -116,7 +309,28 @@ class BenchmarkEngineTests(SimpleTestCase):
         for algorithm_result in result.results:
             self.assertEqual(algorithm_result.warmup_runs, 2)
             self.assertEqual(algorithm_result.trial_count, 4)
-            self.assertEqual(len(algorithm_result.trial_times_seconds), 4)
+            self.assertEqual(
+                len(algorithm_result.trial_times_seconds),
+                4,
+            )
+            self.assertEqual(
+                len(
+                    algorithm_result.preprocessing_trial_times_seconds
+                ),
+                4,
+            )
+            self.assertEqual(
+                len(
+                    algorithm_result.search_trial_times_seconds
+                ),
+                4,
+            )
+            self.assertEqual(
+                len(
+                    algorithm_result.total_trial_times_seconds
+                ),
+                4,
+            )
 
     def test_benchmark_all_positions_are_consistent(self):
         result = benchmark_all(
@@ -192,5 +406,23 @@ class BenchmarkEngineTests(SimpleTestCase):
         for algorithm_result in result.results:
             self.assertEqual(
                 len(algorithm_result.trial_times_seconds),
+                DEFAULT_TRIALS,
+            )
+            self.assertEqual(
+                len(
+                    algorithm_result.preprocessing_trial_times_seconds
+                ),
+                DEFAULT_TRIALS,
+            )
+            self.assertEqual(
+                len(
+                    algorithm_result.search_trial_times_seconds
+                ),
+                DEFAULT_TRIALS,
+            )
+            self.assertEqual(
+                len(
+                    algorithm_result.total_trial_times_seconds
+                ),
                 DEFAULT_TRIALS,
             )

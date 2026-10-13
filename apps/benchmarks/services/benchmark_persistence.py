@@ -78,15 +78,88 @@ def create_benchmark_run(
                         algorithm_version=ALGORITHM_VERSIONS[
                             metric.algorithm
                         ],
+
+                        # Backward-compatible representative timing.
                         elapsed_seconds=metric.elapsed_seconds,
+
+                        # Phase-aware timing.
+                        preprocessing_seconds=(
+                            metric.preprocessing_seconds
+                        ),
+                        search_seconds=metric.search_seconds,
+                        total_seconds=metric.total_seconds,
+
+                        # Repeated-trial methodology.
                         warmup_runs=metric.warmup_runs,
                         trial_count=metric.trial_count,
+
+                        # Existing total timing statistics.
                         median_seconds=metric.median_seconds,
                         minimum_seconds=metric.minimum_seconds,
                         maximum_seconds=metric.maximum_seconds,
+
+                        # Existing total raw trial timings.
                         trial_times_seconds=list(
                             metric.trial_times_seconds
                         ),
+
+                        # Phase-specific raw trial timings.
+                        preprocessing_trial_times_seconds=list(
+                            metric.preprocessing_trial_times_seconds
+                        ),
+                        search_trial_times_seconds=list(
+                            metric.search_trial_times_seconds
+                        ),
+                        total_trial_times_seconds=list(
+                            metric.total_trial_times_seconds
+                        ),
+
+                        # Preprocessing statistics.
+                        preprocessing_median_seconds=(
+                            metric.preprocessing_median_seconds
+                        ),
+                        preprocessing_minimum_seconds=(
+                            metric.preprocessing_minimum_seconds
+                        ),
+                        preprocessing_maximum_seconds=(
+                            metric.preprocessing_maximum_seconds
+                        ),
+
+                        # Search statistics.
+                        search_median_seconds=(
+                            metric.search_median_seconds
+                        ),
+                        search_minimum_seconds=(
+                            metric.search_minimum_seconds
+                        ),
+                        search_maximum_seconds=(
+                            metric.search_maximum_seconds
+                        ),
+
+                        # Total statistics.
+                        total_median_seconds=(
+                            metric.total_median_seconds
+                        ),
+                        total_minimum_seconds=(
+                            metric.total_minimum_seconds
+                        ),
+                        total_maximum_seconds=(
+                            metric.total_maximum_seconds
+                        ),
+
+                        # Rabin–Karp diagnostics.
+                        #
+                        # These are zero for Naive and KMP.
+                        # For Rabin–Karp they contain the measured
+                        # verification and collision counts.
+                        verification_count=(
+                            metric.verification_count
+                        ),
+                        collision_count=(
+                            metric.collision_count
+                        ),
+
+                        # Correctness/result data.
                         match_count=metric.match_count,
                         positions=list(metric.positions),
                         text_length=metric.text_length,

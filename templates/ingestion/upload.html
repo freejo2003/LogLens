@@ -4,57 +4,47 @@
 
 {% block page_title %}Files{% endblock %}
 
+{% block page_subtitle %}
+Upload, inspect, and manage private source files
+{% endblock %}
+
 {% block content %}
 
-<div class="mb-4">
-    <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+<!-- =========================================================
+     UPLOAD + INFORMATION
+     ========================================================= -->
 
-        <div>
-            <h2 class="h3 mb-1">Source Files</h2>
+<div class="row g-3 g-xl-4 mb-4">
 
-            <p class="loglens-muted mb-0">
-                Upload and prepare logs and supported documents for analysis.
-            </p>
-        </div>
+    <!-- Upload -->
 
-        <div>
-            <span class="badge text-bg-light border px-3 py-2">
-                Private workspace files
-            </span>
-        </div>
+    <div class="col-12 col-xl-8">
 
-    </div>
-</div>
-
-
-<!-- Upload section -->
-<div class="row g-4 mb-4">
-
-    <div class="col-lg-8">
-
-        <div class="loglens-card h-100">
+        <div class="loglens-card h-100"
+        id="top-upload"
+        >
 
             <div class="p-4 border-bottom">
 
-                <div class="d-flex align-items-center gap-3">
+                <div class="d-flex align-items-start gap-3">
 
-                    <div class="rounded-3 bg-primary bg-opacity-10
-                                text-primary d-flex align-items-center
-                                justify-content-center"
-                         style="width: 44px; height:44px;">
-
-                        <span class="fw-bold">↑</span>
-
+                    <div
+                        class="d-flex align-items-center justify-content-center rounded-3 bg-primary-subtle text-primary flex-shrink-0"
+                        style="width: 48px; height: 48px;"
+                    >
+                        <i class="bi bi-cloud-arrow-up fs-4"></i>
                     </div>
 
                     <div>
-                        <h3 class="h5 mb-1">
-                            Upload Source File
-                        </h3>
 
-                        <p class="text-muted small mb-0">
+                        <h2 class="h5 mb-1">
+                            Upload Source File
+                        </h2>
+
+                        <p class="loglens-muted small mb-0">
                             Add a log or supported document to your workspace.
                         </p>
+
                     </div>
 
                 </div>
@@ -65,91 +55,134 @@
             <div class="p-4">
 
                 {% if form.non_field_errors %}
-                    <div class="alert alert-danger" role="alert">
+
+                    <div
+                        class="alert alert-danger"
+                        role="alert"
+                    >
                         {{ form.non_field_errors }}
                     </div>
+
                 {% endif %}
 
 
-                <form method="post"
-                      enctype="multipart/form-data">
+                <form
+                    method="post"
+                    enctype="multipart/form-data"
+                >
 
                     {% csrf_token %}
 
 
                     <!-- Workspace -->
+
                     <div class="mb-4">
 
-                        <label for="{{ form.workspace.id_for_label }}"
-                               class="form-label fw-semibold">
-
+                        <label
+                            for="{{ form.workspace.id_for_label }}"
+                            class="form-label"
+                        >
                             Workspace
-
                         </label>
 
                         {{ form.workspace }}
 
                         {% if form.workspace.errors %}
+
                             <div class="text-danger small mt-2">
-                                {{ form.workspace.errors }}
+
+                                {% for error in form.workspace.errors %}
+                                    <div>{{ error }}</div>
+                                {% endfor %}
+
                             </div>
+
                         {% endif %}
 
                     </div>
 
 
                     <!-- File -->
+
                     <div class="mb-4">
 
-                        <label for="{{ form.file.id_for_label }}"
-                               class="form-label fw-semibold">
-
+                        <label
+                            for="{{ form.file.id_for_label }}"
+                            class="form-label"
+                        >
                             Log or document
-
                         </label>
 
-                        <div class="p-3 border rounded-3 bg-light">
 
-                            {{ form.file }}
+                        <div
+                            class="border rounded-3 p-4 bg-light"
+                        >
 
-                            <div class="form-text mt-2">
+                            <div class="d-flex align-items-start gap-3">
 
-                                Supported formats:
-                                <strong>LOG</strong>,
-                                <strong>TXT</strong>,
-                                <strong>PDF</strong>,
-                                <strong>DOCX</strong>,
-                                <strong>DOC</strong>.
+                                <div
+                                    class="d-flex align-items-center justify-content-center rounded-3 bg-white border flex-shrink-0"
+                                    style="width: 44px; height: 44px;"
+                                >
+                                    <i class="bi bi-file-earmark-arrow-up text-primary"></i>
+                                </div>
 
-                                Maximum size:
-                                <strong>25 MB</strong>.
+
+                                <div class="flex-grow-1">
+
+                                    {{ form.file }}
+
+                                    <div class="form-text mt-2">
+                                        Select a file from your computer.
+                                    </div>
+
+                                </div>
 
                             </div>
 
                         </div>
 
+
                         {% if form.file.errors %}
+
                             <div class="text-danger small mt-2">
-                                {{ form.file.errors }}
+
+                                {% for error in form.file.errors %}
+                                    <div>{{ error }}</div>
+                                {% endfor %}
+
                             </div>
+
                         {% endif %}
 
                     </div>
 
 
-                    <!-- Submit -->
-                    <div class="d-flex align-items-center gap-3">
+                    <!-- Upload action -->
 
-                        <button type="submit"
-                                class="btn btn-primary px-4">
+                    <div
+                        class="d-flex align-items-center justify-content-between flex-wrap gap-3"
+                    >
+
+                        <div class="loglens-muted small">
+
+                            <i class="bi bi-lock me-1"></i>
+
+                            Files are stored privately.
+
+                        </div>
+
+
+                        <button
+                            type="submit"
+                            class="btn btn-primary px-4"
+                        >
+
+                            <i class="bi bi-upload me-2"></i>
 
                             Upload File
 
                         </button>
-
-                        <span class="text-muted small">
-                            Files are stored privately.
-                        </span>
 
                     </div>
 
@@ -162,70 +195,178 @@
     </div>
 
 
-    <!-- Processing pipeline -->
-    <div class="col-lg-4">
+    <!-- Supported formats -->
+
+    <div class="col-12 col-xl-4">
 
         <div class="loglens-card h-100">
 
+            <div class="p-4 border-bottom">
+
+                <h2 class="h5 mb-1">
+                    Supported Files
+                </h2>
+
+                <p class="loglens-muted small mb-0">
+                    Formats available for ingestion
+                </p>
+
+            </div>
+
+
             <div class="p-4">
 
-                <h3 class="h6 fw-semibold mb-3">
-                    Processing Pipeline
-                </h3>
+                <div class="d-grid gap-3">
 
 
-                <div class="d-flex gap-3 mb-3">
+                    <!-- LOG -->
 
-                    <div class="text-primary fw-bold">
-                        01
+                    <div class="d-flex align-items-center gap-3">
+
+                        <div
+                            class="d-flex align-items-center justify-content-center rounded-3 bg-primary-subtle text-primary flex-shrink-0"
+                            style="width: 42px; height: 42px;"
+                        >
+                            <i class="bi bi-file-text"></i>
+                        </div>
+
+                        <div>
+
+                            <div class="fw-semibold">
+                                LOG
+                            </div>
+
+                            <div class="loglens-muted small">
+                                Plain-text log files
+                            </div>
+
+                        </div>
+
                     </div>
 
-                    <div>
-                        <div class="fw-semibold small">
-                            Upload
+
+                    <!-- TXT -->
+
+                    <div class="d-flex align-items-center gap-3">
+
+                        <div
+                            class="d-flex align-items-center justify-content-center rounded-3 bg-secondary-subtle text-secondary flex-shrink-0"
+                            style="width: 42px; height: 42px;"
+                        >
+                            <i class="bi bi-filetype-txt"></i>
                         </div>
 
-                        <div class="text-muted small">
-                            Validate and securely store the source file.
+                        <div>
+
+                            <div class="fw-semibold">
+                                TXT
+                            </div>
+
+                            <div class="loglens-muted small">
+                                Plain-text documents
+                            </div>
+
                         </div>
+
+                    </div>
+
+
+                    <!-- PDF -->
+
+                    <div class="d-flex align-items-center gap-3">
+
+                        <div
+                            class="d-flex align-items-center justify-content-center rounded-3 bg-danger-subtle text-danger flex-shrink-0"
+                            style="width: 42px; height: 42px;"
+                        >
+                            <i class="bi bi-filetype-pdf"></i>
+                        </div>
+
+                        <div>
+
+                            <div class="fw-semibold">
+                                PDF
+                            </div>
+
+                            <div class="loglens-muted small">
+                                Text-based PDF documents
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- DOCX -->
+
+                    <div class="d-flex align-items-center gap-3">
+
+                        <div
+                            class="d-flex align-items-center justify-content-center rounded-3 bg-info-subtle text-info flex-shrink-0"
+                            style="width: 42px; height: 42px;"
+                        >
+                            <i class="bi bi-filetype-docx"></i>
+                        </div>
+
+                        <div>
+
+                            <div class="fw-semibold">
+                                DOCX
+                            </div>
+
+                            <div class="loglens-muted small">
+                                Microsoft Word documents
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- DOC -->
+
+                    <div class="d-flex align-items-center gap-3">
+
+                        <div
+                            class="d-flex align-items-center justify-content-center rounded-3 bg-warning-subtle text-warning flex-shrink-0"
+                            style="width: 42px; height: 42px;"
+                        >
+                            <i class="bi bi-file-earmark-word"></i>
+                        </div>
+
+                        <div>
+
+                            <div class="fw-semibold">
+                                DOC
+                            </div>
+
+                            <div class="loglens-muted small">
+                                Legacy Word documents
+                            </div>
+
+                        </div>
+
                     </div>
 
                 </div>
 
 
-                <div class="d-flex gap-3 mb-3">
+                <div class="border-top mt-4 pt-4">
 
-                    <div class="text-primary fw-bold">
-                        02
-                    </div>
+                    <div class="d-flex align-items-start gap-2">
 
-                    <div>
-                        <div class="fw-semibold small">
-                            Extract
+                        <i class="bi bi-info-circle text-primary mt-1"></i>
+
+                        <div class="loglens-muted small">
+
+                            Maximum upload size:
+                            <strong>25 MB</strong>.
+
+                            Uploaded files remain private to the
+                            owning workspace.
+
                         </div>
 
-                        <div class="text-muted small">
-                            Convert the source into ordered searchable text segments.
-                        </div>
-                    </div>
-
-                </div>
-
-
-                <div class="d-flex gap-3">
-
-                    <div class="text-primary fw-bold">
-                        03
-                    </div>
-
-                    <div>
-                        <div class="fw-semibold small">
-                            Analyze
-                        </div>
-
-                        <div class="text-muted small">
-                            Search the extracted content using LogLens algorithms.
-                        </div>
                     </div>
 
                 </div>
@@ -239,22 +380,24 @@
 </div>
 
 
-<!-- Source files -->
+<!-- =========================================================
+     SOURCE FILE LIBRARY
+     ========================================================= -->
+
 <div class="loglens-card">
 
     <div class="p-4 border-bottom">
 
-        <div class="d-flex justify-content-between
-                    align-items-center flex-wrap gap-2">
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
 
             <div>
 
-                <h3 class="h5 mb-1">
-                    Uploaded Source Files
-                </h3>
+                <h2 class="h5 mb-1">
+                    Source File Library
+                </h2>
 
-                <p class="text-muted small mb-0">
-                    Files available in your workspaces.
+                <p class="loglens-muted small mb-0">
+                    Uploaded files available for extraction and analysis.
                 </p>
 
             </div>
@@ -262,8 +405,12 @@
 
             {% if source_files %}
 
-                <span class="badge text-bg-light border">
-                    {{ source_files|length }} file{{ source_files|length|pluralize }}
+                <span class="badge text-bg-light border px-3 py-2">
+
+                    {{ source_files|length }}
+
+                    file{{ source_files|length|pluralize }}
+
                 </span>
 
             {% endif %}
@@ -273,237 +420,304 @@
     </div>
 
 
-    {% if source_files %}
+    <div class="p-0">
 
-        <div class="table-responsive">
+        {% if source_files %}
 
-            <table class="table table-hover align-middle mb-0">
+            <div class="table-responsive">
 
-                <thead class="table-light">
+                <table class="table loglens-table table-hover align-middle">
 
-                    <tr>
-
-                        <th class="ps-4">
-                            File
-                        </th>
-
-                        <th>
-                            Workspace
-                        </th>
-
-                        <th>
-                            Size
-                        </th>
-
-                        <th>
-                            Status
-                        </th>
-
-                        <th>
-                            Uploaded
-                        </th>
-
-                        <th class="pe-4 text-end">
-                            Actions
-                        </th>
-
-                    </tr>
-
-                </thead>
-
-
-                <tbody>
-
-                    {% for source_file in source_files %}
+                    <thead>
 
                         <tr>
 
-                            <!-- File -->
-                            <td class="ps-4">
+                            <th class="ps-4">
+                                File
+                            </th>
 
-                                <div class="fw-semibold">
-                                    {{ source_file.original_name }}
-                                </div>
+                            <th>
+                                Workspace
+                            </th>
 
-                                <div class="text-muted small">
-                                    ID {{ source_file.id }}
-                                </div>
+                            <th>
+                                Type
+                            </th>
 
-                            </td>
+                            <th>
+                                Size
+                            </th>
 
+                            <th>
+                                Status
+                            </th>
 
-                            <!-- Workspace -->
-                            <td>
+                            <th>
+                                Uploaded
+                            </th>
 
-                                <span class="small">
-                                    {{ source_file.workspace.name }}
-                                </span>
+                            <th class="pe-4 text-end">
+                                Actions
+                            </th>
 
-                            </td>
+                        </tr>
 
-
-                            <!-- Size -->
-                            <td>
-
-                                <span class="small text-muted">
-                                    {{ source_file.byte_size }} bytes
-                                </span>
-
-                            </td>
+                    </thead>
 
 
-                            <!-- Status -->
-                            <td>
+                    <tbody>
 
-                                {% if source_file.extraction_status == "pending" %}
+                        {% for file in source_files %}
 
-                                    <span class="badge text-bg-warning">
-                                        Pending
+                            <tr>
+
+                                <!-- File -->
+
+                                <td class="ps-4">
+
+                                    <div
+                                        class="d-flex align-items-center gap-3"
+                                        style="min-width: 220px;"
+                                    >
+
+                                        <div
+                                            class="d-flex align-items-center justify-content-center rounded-3 bg-light border flex-shrink-0"
+                                            style="width: 40px; height: 40px;"
+                                        >
+
+                                            {% if file.extension == ".pdf" %}
+
+                                                <i class="bi bi-filetype-pdf text-danger"></i>
+
+                                            {% elif file.extension == ".docx" %}
+
+                                                <i class="bi bi-filetype-docx text-primary"></i>
+
+                                            {% elif file.extension == ".doc" %}
+
+                                                <i class="bi bi-file-earmark-word text-primary"></i>
+
+                                            {% else %}
+
+                                                <i class="bi bi-file-text text-secondary"></i>
+
+                                            {% endif %}
+
+                                        </div>
+
+
+                                        <div
+                                            class="text-truncate"
+                                            style="min-width: 0;"
+                                        >
+
+                                            <div
+                                                class="fw-semibold text-truncate"
+                                                title="{{ file.original_name }}"
+                                            >
+                                                {{ file.original_name }}
+                                            </div>
+
+                                            <div class="loglens-muted small">
+                                                {{ file.extension|upper }}
+                                            </div>
+
+                                        </div>
+
+                                    </div>
+
+                                </td>
+
+
+                                <!-- Workspace -->
+
+                                <td>
+
+                                    <span class="text-nowrap">
+
+                                        {% if file.workspace %}
+                                            {{ file.workspace.name }}
+                                        {% else %}
+                                            —
+                                        {% endif %}
+
                                     </span>
 
-                                {% elif source_file.extraction_status == "processing" %}
+                                </td>
 
-                                    <span class="badge text-bg-info">
-                                        Processing
+
+                                <!-- Type -->
+
+                                <td>
+
+                                    <span class="text-nowrap">
+
+                                        {{ file.detected_type|default:"Unknown" }}
+
                                     </span>
 
-                                {% elif source_file.extraction_status == "succeeded" %}
+                                </td>
 
-                                    <span class="badge text-bg-success">
-                                        Succeeded
+
+                                <!-- Size -->
+
+                                <td>
+
+                                    <span class="text-nowrap">
+
+                                        {{ file.byte_size|filesizeformat }}
+
                                     </span>
 
-                                {% elif source_file.extraction_status == "failed" %}
-
-                                    <span class="badge text-bg-danger">
-                                        Failed
-                                    </span>
-
-                                {% elif source_file.extraction_status == "ocr_needed" %}
-
-                                    <span class="badge text-bg-secondary">
-                                        OCR Needed
-                                    </span>
-
-                                {% else %}
-
-                                    <span class="badge text-bg-secondary">
-                                        {{ source_file.extraction_status }}
-                                    </span>
-
-                                {% endif %}
-
-                            </td>
+                                </td>
 
 
-                            <!-- Uploaded -->
-                            <td>
+                                <!-- Status -->
 
-                                <span class="small text-muted">
-                                    {{ source_file.uploaded_at|date:"Y-m-d H:i" }}
-                                </span>
+                                <td>
 
-                            </td>
+                                    {% if file.extraction_status == "succeeded" %}
 
-
-                            <!-- Actions -->
-                            <td class="pe-4 text-end">
-
-                                <div class="d-inline-flex align-items-center gap-2">
-
-                                    {% if source_file.extraction_status == "succeeded" %}
-
-                                        <span class="text-success small fw-semibold">
+                                        <span class="badge text-bg-success">
                                             Extracted
                                         </span>
 
-                                    {% elif source_file.extraction_status == "processing" %}
+                                    {% elif file.extraction_status == "pending" %}
 
-                                        <span class="text-muted small">
-                                            Processing...
+                                        <span class="badge text-bg-warning">
+                                            Pending
+                                        </span>
+
+                                    {% elif file.extraction_status == "processing" %}
+
+                                        <span class="badge text-bg-info">
+                                            Processing
+                                        </span>
+
+                                    {% elif file.extraction_status == "failed" %}
+
+                                        <span class="badge text-bg-danger">
+                                            Failed
+                                        </span>
+
+                                    {% elif file.extraction_status == "ocr_needed" %}
+
+                                        <span class="badge text-bg-secondary">
+                                            OCR Needed
                                         </span>
 
                                     {% else %}
 
-                                        <form method="post"
-                                              action="{% url 'ingestion:extract' source_file.id %}"
-                                              class="d-inline">
-
-                                            {% csrf_token %}
-
-                                            <button type="submit"
-                                                    class="btn btn-sm btn-success">
-
-                                                Extract
-
-                                            </button>
-
-                                        </form>
+                                        <span class="badge text-bg-secondary">
+                                            {{ file.extraction_status|default:"Unknown" }}
+                                        </span>
 
                                     {% endif %}
 
+                                </td>
 
-                                    <!-- Delete -->
-                                    <form method="post"
-                                          action="{% url 'ingestion:delete' source_file.id %}"
-                                          class="d-inline"
-                                          onsubmit="return confirm('Delete {{ source_file.original_name|escapejs }} permanently? This will remove the uploaded file and its extracted text.');">
 
-                                        {% csrf_token %}
+                                <!-- Uploaded -->
 
-                                        <button type="submit"
-                                                class="btn btn-sm btn-outline-danger">
+                                <td>
 
-                                            Delete
+                                    <span
+                                        class="text-nowrap loglens-muted small"
+                                    >
+                                        {{ file.uploaded_at|date:"d M Y, H:i" }}
+                                    </span>
 
-                                        </button>
+                                </td>
 
-                                    </form>
 
-                                </div>
+                                <!-- Actions -->
 
-                            </td>
+                                <td class="pe-4">
 
-                        </tr>
+                                    <div
+                                        class="d-flex justify-content-end gap-2"
+                                    >
 
-                    {% endfor %}
+                                        {% if file.extraction_status == "succeeded" %}
 
-                </tbody>
+                                            <a
+                                                href="{% url 'search:run' %}"
+                                                class="btn btn-sm btn-outline-primary"
+                                                title="Search this file"
+                                            >
+                                                <i class="bi bi-search"></i>
+                                                <span class="d-none d-lg-inline ms-1">
+                                                    Search
+                                                </span>
+                                            </a>
 
-            </table>
+                                        {% endif %}
 
-        </div>
 
-    {% else %}
+                                        {% if file.deleted_at %}
 
-        <div class="p-5 text-center">
+                                            <span class="badge text-bg-secondary">
+                                                Deleted
+                                            </span>
 
-            <div class="mb-3">
+                                        {% endif %}
 
-                <div class="mx-auto rounded-circle bg-light
-                            d-flex align-items-center justify-content-center"
-                     style="width: 56px; height: 56px;">
+                                    </div>
 
-                    <span class="text-muted fw-bold">
-                        —
-                    </span>
+                                </td>
 
-                </div>
+                            </tr>
+
+                        {% endfor %}
+
+                    </tbody>
+
+                </table>
 
             </div>
 
-            <h4 class="h6">
-                No source files yet
-            </h4>
 
-            <p class="text-muted small mb-0">
-                Upload your first log or document to begin analysis.
-            </p>
+        {% else %}
 
-        </div>
+            <div class="text-center py-5 px-4">
 
-    {% endif %}
+                <div
+                    class="d-inline-flex align-items-center justify-content-center rounded-circle bg-light text-secondary"
+                    style="width: 72px; height: 72px;"
+                >
+                    <i class="bi bi-folder2-open fs-2"></i>
+                </div>
+
+
+                <h3 class="h5 mt-4 mb-2">
+                    No source files yet
+                </h3>
+
+
+                <p class="loglens-muted mb-4 mx-auto" style="max-width: 480px;">
+
+                    Upload a LOG, TXT, PDF, DOCX, or DOC file.
+                    Once extraction succeeds, the file becomes available
+                    for searching and analysis.
+
+                </p>
+
+
+                <a
+                    href="#top-upload"
+                    class="btn btn-primary"
+                >
+                    <i class="bi bi-upload me-2"></i>
+                    Upload File
+                </a>
+
+            </div>
+
+        {% endif %}
+
+    </div>
 
 </div>
+
 
 {% endblock %}

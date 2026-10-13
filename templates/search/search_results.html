@@ -1,0 +1,630 @@
+{% extends "base.html" %}
+
+{% block title %}Search Results — LogLens{% endblock %}
+
+{% block page_title %}Search Results{% endblock %}
+
+{% block page_subtitle %}
+Review matching log entries, source locations, and search metadata.
+{% endblock %}
+
+{% block content %}
+
+{% if error_message %}
+
+    <div class="alert alert-danger d-flex align-items-start gap-3">
+        <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+
+        <div>
+            <div class="fw-semibold mb-1">
+                Search failed
+            </div>
+
+            <div>
+                {{ error_message }}
+            </div>
+        </div>
+    </div>
+
+{% else %}
+
+    <!-- Search Summary -->
+
+    <div class="loglens-card mb-4">
+
+        <div class="p-4">
+
+            <div class="row g-4 align-items-center">
+
+                <!-- Pattern -->
+
+                <div class="col-12 col-lg-6">
+
+                    <div class="small text-secondary mb-2">
+                        Search pattern
+                    </div>
+
+                    <div class="d-flex align-items-center gap-3">
+
+                        <div class="bg-primary-subtle text-primary rounded-3 p-2">
+                            <i class="bi bi-search fs-5"></i>
+                        </div>
+
+                        <code class="fs-5 text-break">
+                            {{ search_run.pattern }}
+                        </code>
+
+                    </div>
+
+                </div>
+
+
+                <!-- Algorithm -->
+
+                <div class="col-12 col-sm-6 col-lg-2">
+
+                    <div class="small text-secondary mb-1">
+                        Algorithm
+                    </div>
+
+                    <div class="fw-semibold">
+                        {{ search_run.algorithm }}
+                    </div>
+
+                </div>
+
+
+                <!-- Matches -->
+
+                <div class="col-12 col-sm-6 col-lg-2">
+
+                    <div class="small text-secondary mb-1">
+                        Matches
+                    </div>
+
+                    <div class="fs-4 fw-semibold">
+                        {{ search_run.total_match_count }}
+                    </div>
+
+                </div>
+
+
+                <!-- Status -->
+
+                <div class="col-12 col-sm-6 col-lg-2">
+
+                    <div class="small text-secondary mb-1">
+                        Status
+                    </div>
+
+                    {% if search_run.status == "failed" %}
+
+                        <span class="badge rounded-pill text-bg-danger">
+                            Failed
+                        </span>
+
+                    {% else %}
+
+                        <span class="badge rounded-pill text-bg-success">
+                            {{ search_run.get_status_display }}
+                        </span>
+
+                    {% endif %}
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- Source Information -->
+
+    {% if search_run.source_file %}
+
+        <div class="loglens-card mb-4">
+
+            <div class="p-4">
+
+                <div class="row g-4">
+
+                    <div class="col-12 col-md-6">
+
+                        <div class="small text-secondary mb-1">
+                            Source File
+                        </div>
+
+                        <div class="fw-semibold text-break">
+                            {{ search_run.source_file.original_name }}
+                        </div>
+
+                    </div>
+
+
+                    {% if search_run.source_checksum %}
+
+                        <div class="col-12 col-md-6">
+
+                            <div class="small text-secondary mb-1">
+                                Source Checksum
+                            </div>
+
+                            <code class="small text-break">
+                                {{ search_run.source_checksum }}
+                            </code>
+
+                        </div>
+
+                    {% endif %}
+
+                </div>
+
+            </div>
+
+        </div>
+
+    {% endif %}
+
+
+    <!-- Matching Results -->
+
+    <div class="loglens-card mb-4">
+
+        <div class="p-4 border-bottom">
+
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+
+                <div>
+
+                    <h2 class="h5 mb-1">
+                        Matching Results
+                    </h2>
+
+                    <p class="text-secondary small mb-0">
+                        Each result identifies the extracted text segment,
+                        source locator, and character positions where the
+                        pattern was found.
+                    </p>
+
+                </div>
+
+                {% if match_results %}
+
+                    <span class="badge text-bg-secondary">
+                        {{ match_results|length }}
+                        result{{ match_results|length|pluralize }}
+                    </span>
+
+                {% endif %}
+
+            </div>
+
+        </div>
+
+
+        {% if match_results %}
+
+            <div class="table-responsive">
+
+                <table class="table table-hover align-middle mb-0 loglens-table">
+
+                    <thead>
+
+                        <tr>
+
+                            <th class="ps-4">
+                                Segment
+                            </th>
+
+                            <th>
+                                Location
+                            </th>
+
+                            <th>
+                                Matches
+                            </th>
+
+                            <th>
+                                Positions
+                            </th>
+
+                            <th>
+                                Extracted Text
+                            </th>
+
+                        </tr>
+
+                    </thead>
+
+
+                    <tbody>
+
+                        {% for result in match_results %}
+
+                            <tr>
+
+                                <!-- Segment -->
+
+                                <td class="ps-4">
+
+                                    <span class="fw-semibold">
+                                        #{{ result.segment.sequence }}
+                                    </span>
+
+                                </td>
+
+
+                                <!-- Location -->
+
+                                <td>
+
+                                    {% if result.segment.page_number %}
+
+                                        <div class="small">
+                                            <span class="text-secondary">
+                                                Page
+                                            </span>
+                                            {{ result.segment.page_number }}
+                                        </div>
+
+                                    {% endif %}
+
+
+                                    {% if result.segment.paragraph_number %}
+
+                                        <div class="small">
+                                            <span class="text-secondary">
+                                                Paragraph
+                                            </span>
+                                            {{ result.segment.paragraph_number }}
+                                        </div>
+
+                                    {% endif %}
+
+
+                                    {% if result.segment.line_number %}
+
+                                        <div class="small">
+                                            <span class="text-secondary">
+                                                Line
+                                            </span>
+                                            {{ result.segment.line_number }}
+                                        </div>
+
+                                    {% endif %}
+
+
+                                    <div class="small">
+                                        <span class="text-secondary">
+                                            Segment
+                                        </span>
+                                        {{ result.segment.sequence }}
+                                    </div>
+
+                                </td>
+
+
+                                <!-- Match Count -->
+
+                                <td>
+
+                                    <span class="badge text-bg-primary">
+                                        {{ result.match_count }}
+                                    </span>
+
+                                </td>
+
+
+                                <!-- Positions -->
+
+                                <td>
+
+                                    {% if result.positions %}
+
+                                        <div class="d-flex flex-wrap gap-1">
+
+                                            {% for position in result.positions %}
+
+                                                <code class="small border rounded px-2 py-1">
+                                                    {{ position }}
+                                                </code>
+
+                                            {% endfor %}
+
+                                        </div>
+
+                                    {% else %}
+
+                                        <span class="text-secondary">
+                                            —
+                                        </span>
+
+                                    {% endif %}
+
+                                </td>
+
+
+                                <!-- Extracted Text -->
+
+                                <td>
+
+                                    <div
+                                        class="small text-break"
+                                        style="max-width: 700px;"
+                                    >
+                                        <pre
+                                            class="mb-0"
+                                            style="white-space: pre-wrap; font-family: inherit;"
+                                        >{{ result.segment.text }}</pre>
+                                    </div>
+
+                                </td>
+
+                            </tr>
+
+                        {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        {% else %}
+
+            <div class="p-5 text-center">
+
+                <div
+                    class="bg-secondary-subtle text-secondary rounded-circle d-inline-flex align-items-center justify-content-center mb-3"
+                    style="width: 64px; height: 64px;"
+                >
+                    <i class="bi bi-search fs-3"></i>
+                </div>
+
+                <h3 class="h5 mb-2">
+                    No matches found
+                </h3>
+
+                <p class="text-secondary mb-4">
+                    The selected pattern was not found in the searched
+                    content.
+                </p>
+
+                <a
+                    href="{% url 'search:run' %}"
+                    class="btn btn-primary"
+                >
+                    <i class="bi bi-search me-1"></i>
+                    Run Another Search
+                </a>
+
+            </div>
+
+        {% endif %}
+
+    </div>
+
+
+    <!-- Search Metadata -->
+
+    {% if search_run %}
+
+        <div class="loglens-card mb-4">
+
+            <div class="p-4 border-bottom">
+
+                <h2 class="h5 mb-1">
+                    Search Metadata
+                </h2>
+
+                <p class="text-secondary small mb-0">
+                    Configuration and execution information associated
+                    with this search run.
+                </p>
+
+            </div>
+
+
+            <div class="p-4">
+
+                <div class="row g-3">
+
+                    <!-- Pattern -->
+
+                    <div class="col-12 col-md-6 col-xl-3">
+
+                        <div class="border rounded-3 p-3 h-100">
+
+                            <div class="small text-secondary mb-1">
+                                Pattern
+                            </div>
+
+                            <div class="fw-semibold text-break">
+                                {{ search_run.pattern }}
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- Algorithm -->
+
+                    <div class="col-12 col-md-6 col-xl-3">
+
+                        <div class="border rounded-3 p-3 h-100">
+
+                            <div class="small text-secondary mb-1">
+                                Algorithm
+                            </div>
+
+                            <div class="fw-semibold">
+                                {{ search_run.algorithm }}
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- Status -->
+
+                    <div class="col-12 col-md-6 col-xl-3">
+
+                        <div class="border rounded-3 p-3 h-100">
+
+                            <div class="small text-secondary mb-1">
+                                Status
+                            </div>
+
+                            <div class="fw-semibold">
+                                {{ search_run.get_status_display }}
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- Total Matches -->
+
+                    <div class="col-12 col-md-6 col-xl-3">
+
+                        <div class="border rounded-3 p-3 h-100">
+
+                            <div class="small text-secondary mb-1">
+                                Total Matches
+                            </div>
+
+                            <div class="fw-semibold">
+                                {{ search_run.total_match_count }}
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- Created -->
+
+                    {% if search_run.created_at %}
+
+                        <div class="col-12 col-md-6 col-xl-3">
+
+                            <div class="border rounded-3 p-3 h-100">
+
+                                <div class="small text-secondary mb-1">
+                                    Created
+                                </div>
+
+                                <div class="fw-semibold">
+                                    {{ search_run.created_at|date:"d M Y, H:i" }}
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    {% endif %}
+
+
+                    <!-- Completed -->
+
+                    {% if search_run.completed_at %}
+
+                        <div class="col-12 col-md-6 col-xl-3">
+
+                            <div class="border rounded-3 p-3 h-100">
+
+                                <div class="small text-secondary mb-1">
+                                    Completed
+                                </div>
+
+                                <div class="fw-semibold">
+                                    {{ search_run.completed_at|date:"d M Y, H:i" }}
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    {% endif %}
+
+
+                    <!-- Source Checksum -->
+
+                    {% if search_run.source_checksum %}
+
+                        <div class="col-12 col-md-6 col-xl-6">
+
+                            <div class="border rounded-3 p-3 h-100">
+
+                                <div class="small text-secondary mb-1">
+                                    Source Checksum
+                                </div>
+
+                                <code class="small text-break">
+                                    {{ search_run.source_checksum }}
+                                </code>
+
+                            </div>
+
+                        </div>
+
+                    {% endif %}
+
+                </div>
+
+            </div>
+
+        </div>
+
+    {% endif %}
+
+
+    <!-- Actions -->
+
+    <div class="d-flex flex-wrap gap-2">
+
+        <a
+            href="{% url 'search:run' %}"
+            class="btn btn-primary"
+        >
+            <i class="bi bi-search me-1"></i>
+            New Search
+        </a>
+
+
+        <a
+            href="{% url 'search:error-groups' %}"
+            class="btn btn-outline-secondary"
+        >
+            <i class="bi bi-collection me-1"></i>
+            Error Groups
+        </a>
+
+
+        <a
+            href="{% url 'search:indicators' %}"
+            class="btn btn-outline-secondary"
+        >
+            <i class="bi bi-shield-check me-1"></i>
+            Indicators
+        </a>
+
+
+        <a
+            href="{% url 'dashboard' %}"
+            class="btn btn-outline-secondary"
+        >
+            <i class="bi bi-grid me-1"></i>
+            Dashboard
+        </a>
+
+    </div>
+
+{% endif %}
+
+{% endblock %}

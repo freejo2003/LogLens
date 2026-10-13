@@ -105,9 +105,33 @@ class AlgorithmMetric(models.Model):
         default="1.0",
     )
 
-    # Representative timing. This remains the public timing field
-    # used by the existing benchmark/reporting code.
+    # Representative total timing.
+    #
+    # This remains the compatibility field used by the existing
+    # benchmark/reporting code.
     elapsed_seconds = models.FloatField()
+
+    # Phase-aware representative timings.
+    #
+    # preprocessing_seconds:
+    # Time required to prepare algorithm-specific state.
+    #
+    # search_seconds:
+    # Time required to search the text using the prepared state.
+    #
+    # total_seconds:
+    # Time for the complete preprocessing + search operation.
+    preprocessing_seconds = models.FloatField(
+        default=0.0,
+    )
+
+    search_seconds = models.FloatField(
+        default=0.0,
+    )
+
+    total_seconds = models.FloatField(
+        default=0.0,
+    )
 
     # Repeated-trial methodology metadata.
     warmup_runs = models.PositiveIntegerField(
@@ -118,7 +142,7 @@ class AlgorithmMetric(models.Model):
         default=1,
     )
 
-    # Statistical timing summary.
+    # Statistical timing summary for total execution.
     median_seconds = models.FloatField(
         default=0.0,
     )
@@ -131,9 +155,80 @@ class AlgorithmMetric(models.Model):
         default=0.0,
     )
 
-    # Raw measured trial timings retained for reproducibility.
+    # Raw total timings retained for reproducibility.
     trial_times_seconds = models.JSONField(
         default=list,
+    )
+
+    # Raw phase timings retained for reproducibility.
+    preprocessing_trial_times_seconds = models.JSONField(
+        default=list,
+    )
+
+    search_trial_times_seconds = models.JSONField(
+        default=list,
+    )
+
+    total_trial_times_seconds = models.JSONField(
+        default=list,
+    )
+
+    # Statistical summary for preprocessing.
+    preprocessing_median_seconds = models.FloatField(
+        default=0.0,
+    )
+
+    preprocessing_minimum_seconds = models.FloatField(
+        default=0.0,
+    )
+
+    preprocessing_maximum_seconds = models.FloatField(
+        default=0.0,
+    )
+
+    # Statistical summary for search.
+    search_median_seconds = models.FloatField(
+        default=0.0,
+    )
+
+    search_minimum_seconds = models.FloatField(
+        default=0.0,
+    )
+
+    search_maximum_seconds = models.FloatField(
+        default=0.0,
+    )
+
+    # Statistical summary for total execution.
+    total_median_seconds = models.FloatField(
+        default=0.0,
+    )
+
+    total_minimum_seconds = models.FloatField(
+        default=0.0,
+    )
+
+    total_maximum_seconds = models.FloatField(
+        default=0.0,
+    )
+
+    # Rabin–Karp diagnostic metrics.
+    #
+    # These remain zero for Naive and KMP.
+    #
+    # verification_count:
+    # Number of hash matches that required character-by-character
+    # verification.
+    #
+    # collision_count:
+    # Number of hash matches that failed character-by-character
+    # verification because of a hash collision.
+    verification_count = models.PositiveIntegerField(
+        default=0,
+    )
+
+    collision_count = models.PositiveIntegerField(
+        default=0,
     )
 
     match_count = models.PositiveIntegerField()

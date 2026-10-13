@@ -2,256 +2,699 @@
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
 
     <meta charset="UTF-8">
 
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1"
-    >
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <meta name="description" content="LogLens — log monitoring, search, error analysis, and algorithm benchmarking.">
 
     <title>
         {% block title %}LogLens{% endblock %}
     </title>
 
-    <link
-        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
-        rel="stylesheet"
-    >
+    <!-- Bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 
-    <link
-        href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"
-        rel="stylesheet"
-    >
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
 
     <style>
+        /* =========================================================
+           DESIGN TOKENS
+           ========================================================= */
+
+        :root {
+            --loglens-sidebar-width: 248px;
+            --loglens-topbar-height: 68px;
+
+            --loglens-bg: #f5f7fa;
+            --loglens-surface: #ffffff;
+            --loglens-border: #e2e6eb;
+
+            --loglens-sidebar-bg: #212529;
+            --loglens-sidebar-hover: #2d3238;
+            --loglens-sidebar-active: #454a50;
+
+            --loglens-text: #172033;
+            --loglens-muted: #6c757d;
+
+            --loglens-primary: #0d6efd;
+
+            --loglens-radius: 0.65rem;
+            --loglens-shadow:
+                0 1px 2px rgba(16, 24, 40, 0.04),
+                0 4px 12px rgba(16, 24, 40, 0.04);
+        }
+
+
+        /* =========================================================
+           GLOBAL
+           ========================================================= */
+
+        html {
+            min-height: 100%;
+        }
 
         body {
             min-height: 100vh;
-            background-color: #f8f9fa;
+            margin: 0;
+
+            background-color: var(--loglens-bg);
+            color: var(--loglens-text);
+
+            font-family:
+                system-ui,
+                -apple-system,
+                BlinkMacSystemFont,
+                "Segoe UI",
+                sans-serif;
+
+            font-size: 0.95rem;
         }
+
+        a {
+            text-decoration: none;
+        }
+
+        button,
+        input,
+        select,
+        textarea {
+            font: inherit;
+        }
+
+
+        /* =========================================================
+           SIDEBAR
+           ========================================================= */
 
         .sidebar {
-            width: 250px;
-            min-height: 100vh;
-            background-color: #212529;
             position: fixed;
-            top: 0;
-            left: 0;
-            z-index: 1000;
+            inset: 0 auto 0 0;
+
+            width: var(--loglens-sidebar-width);
+            min-height: 100vh;
+
+            background-color: var(--loglens-sidebar-bg);
+
+            z-index: 1040;
+
+            display: flex;
+            flex-direction: column;
+
+            overflow-y: auto;
         }
 
+
+        /* Brand */
+
         .sidebar-brand {
-            height: 70px;
+            min-height: var(--loglens-topbar-height);
+
             display: flex;
             align-items: center;
+
             padding: 0 1.25rem;
+
             color: #ffffff;
-            text-decoration: none;
-            font-size: 1.25rem;
-            font-weight: 600;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+
+            border-bottom:
+                1px solid rgba(255, 255, 255, 0.09);
+
+            font-size: 1.2rem;
+            font-weight: 650;
+
+            flex-shrink: 0;
         }
+
+        .sidebar-brand:hover {
+            color: #ffffff;
+        }
+
+        .sidebar-brand i {
+            font-size: 1.15rem;
+        }
+
+
+        /* Navigation */
 
         .sidebar-nav {
             padding: 1rem 0.75rem;
         }
 
+        .sidebar-nav-label {
+            padding:
+                0.5rem 0.85rem 0.4rem;
+
+            color:
+                rgba(255, 255, 255, 0.38);
+
+            font-size: 0.7rem;
+            font-weight: 700;
+
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
         .sidebar .nav-link {
-            color: rgba(255, 255, 255, 0.75);
-            border-radius: 0.5rem;
+            min-height: 44px;
+
+            display: flex;
+            align-items: center;
+
             margin-bottom: 0.25rem;
-            padding: 0.7rem 0.85rem;
+            padding: 0.65rem 0.85rem;
+
+            color:
+                rgba(255, 255, 255, 0.72);
+
+            border-radius: 0.55rem;
+
+            font-size: 0.94rem;
+
+            transition:
+                background-color 0.15s ease,
+                color 0.15s ease;
         }
 
         .sidebar .nav-link:hover {
             color: #ffffff;
-            background-color: rgba(255, 255, 255, 0.08);
+            background-color: var(--loglens-sidebar-hover);
         }
 
         .sidebar .nav-link.active {
             color: #ffffff;
-            background-color: rgba(255, 255, 255, 0.15);
+            background-color: var(--loglens-sidebar-active);
         }
 
         .sidebar .nav-link i {
             width: 22px;
-            margin-right: 0.5rem;
+
+            margin-right: 0.65rem;
+
+            font-size: 1.05rem;
+
+            text-align: center;
+
+            flex-shrink: 0;
         }
+
+
+        /* Disabled navigation item */
+
+        .sidebar .nav-link.disabled {
+            opacity: 0.45;
+            cursor: default;
+        }
+
+        .sidebar .nav-link.disabled:hover {
+            background-color: transparent;
+        }
+
+
+        /* =========================================================
+           MAIN APPLICATION AREA
+           ========================================================= */
 
         .main-wrapper {
-            margin-left: 250px;
             min-height: 100vh;
+            margin-left: var(--loglens-sidebar-width);
+
+            display: flex;
+            flex-direction: column;
         }
 
+
+        /* =========================================================
+           TOP BAR
+           ========================================================= */
+
         .topbar {
-            height: 70px;
-            background-color: #ffffff;
-            border-bottom: 1px solid #dee2e6;
+            position: sticky;
+            top: 0;
+
+            min-height: var(--loglens-topbar-height);
+
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 0 1.5rem;
+
+            padding:
+                0 1.5rem;
+
+            background-color:
+                rgba(255, 255, 255, 0.96);
+
+            border-bottom:
+                1px solid var(--loglens-border);
+
+            backdrop-filter: blur(8px);
+
+            z-index: 1020;
         }
 
-        .content {
-            padding: 1.5rem;
+        .topbar-brand {
+            color: var(--loglens-text);
+            font-size: 1rem;
+            font-weight: 650;
         }
+
+        .topbar-user {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .topbar-username {
+            color: var(--loglens-muted);
+            font-size: 0.875rem;
+        }
+
+
+        /* =========================================================
+           PAGE CONTENT
+           ========================================================= */
+
+        .content {
+            width: 100%;
+            max-width: 1600px;
+
+            margin: 0 auto;
+
+            padding:
+                1.75rem 1.75rem 2.5rem;
+        }
+
+
+        /* =========================================================
+           PAGE HEADER
+           ========================================================= */
 
         .page-header {
             margin-bottom: 1.5rem;
         }
 
         .page-header h1 {
+            margin: 0 0 0.3rem;
+
+            color: var(--loglens-text);
+
             font-size: 1.75rem;
-            margin-bottom: 0.25rem;
+            font-weight: 650;
+            line-height: 1.25;
         }
 
         .page-header p {
-            color: #6c757d;
+            margin: 0;
+
+            color: var(--loglens-muted);
+
+            font-size: 0.95rem;
+        }
+
+
+        /* =========================================================
+           APPLICATION CARDS
+           ========================================================= */
+
+        .loglens-card {
+            background-color: var(--loglens-surface);
+
+            border:
+                1px solid var(--loglens-border);
+
+            border-radius:
+                var(--loglens-radius);
+
+            box-shadow:
+                var(--loglens-shadow);
+        }
+
+        .loglens-muted {
+            color: var(--loglens-muted);
+        }
+
+
+        /* =========================================================
+           TABLES
+           ========================================================= */
+
+        .loglens-table {
             margin-bottom: 0;
         }
 
-        .card {
-            border: 1px solid #dee2e6;
+        .loglens-table thead th {
+            background-color: #f8f9fb;
+
+            color: #5f6875;
+
+            border-bottom:
+                1px solid var(--loglens-border);
+
+            font-size: 0.78rem;
+            font-weight: 650;
+
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
         }
 
-        @media (max-width: 768px) {
+        .loglens-table tbody td {
+            border-color:
+                var(--loglens-border);
+
+            vertical-align: middle;
+        }
+
+
+        /* =========================================================
+           FORMS
+           ========================================================= */
+
+        .form-label {
+            color: #344054;
+            font-weight: 550;
+        }
+
+        .form-control,
+        .form-select {
+            min-height: 42px;
+
+            border-color:
+                #d7dce2;
+
+            border-radius:
+                0.5rem;
+        }
+
+        .form-control:focus,
+        .form-select:focus {
+            border-color:
+                rgba(13, 110, 253, 0.55);
+
+            box-shadow:
+                0 0 0 0.2rem rgba(13, 110, 253, 0.12);
+        }
+
+
+        /* =========================================================
+           BUTTONS
+           ========================================================= */
+
+        .btn {
+            border-radius: 0.5rem;
+            font-weight: 550;
+        }
+
+
+        /* =========================================================
+           BADGES
+           ========================================================= */
+
+        .badge {
+            font-weight: 550;
+        }
+
+
+        /* =========================================================
+           ALERTS
+           ========================================================= */
+
+        .alert {
+            border-radius: 0.55rem;
+        }
+
+
+        /* =========================================================
+           MOBILE TOPBAR TOGGLE
+           ========================================================= */
+
+        .sidebar-toggle {
+            display: none;
+
+            width: 38px;
+            height: 38px;
+
+            align-items: center;
+            justify-content: center;
+
+            padding: 0;
+
+            border:
+                1px solid var(--loglens-border);
+
+            background-color: #ffffff;
+
+            color: var(--loglens-text);
+
+            border-radius: 0.5rem;
+        }
+
+
+        /* =========================================================
+           SIDEBAR OVERLAY
+           ========================================================= */
+
+        .sidebar-overlay {
+            display: none;
+
+            position: fixed;
+            inset: 0;
+
+            background-color:
+                rgba(0, 0, 0, 0.45);
+
+            z-index: 1030;
+        }
+
+
+        /* =========================================================
+           RESPONSIVE
+           ========================================================= */
+
+        @media (max-width: 991.98px) {
+
+            :root {
+                --loglens-sidebar-width: 232px;
+            }
 
             .sidebar {
-                width: 70px;
+                transform: translateX(-100%);
+
+                transition:
+                    transform 0.2s ease;
             }
 
-            .sidebar-brand span,
-            .sidebar .nav-link span {
-                display: none;
+            body.sidebar-open .sidebar {
+                transform: translateX(0);
             }
 
-            .sidebar .nav-link {
-                text-align: center;
-            }
-
-            .sidebar .nav-link i {
-                margin-right: 0;
+            body.sidebar-open .sidebar-overlay {
+                display: block;
             }
 
             .main-wrapper {
-                margin-left: 70px;
+                margin-left: 0;
+            }
+
+            .sidebar-toggle {
+                display: inline-flex;
+            }
+
+            .topbar {
+                padding:
+                    0 1rem;
+            }
+
+            .content {
+                padding:
+                    1.25rem 1rem 2rem;
             }
 
         }
 
+
+        @media (max-width: 575.98px) {
+
+            .topbar {
+                min-height: 62px;
+            }
+
+            .topbar-user {
+                gap: 0.4rem;
+            }
+
+            .topbar-username {
+                display: none;
+            }
+
+            .content {
+                padding:
+                    1rem 0.85rem 1.75rem;
+            }
+
+            .page-header h1 {
+                font-size: 1.5rem;
+            }
+
+        }
     </style>
 
     {% block extra_css %}{% endblock %}
 
 </head>
 
+
 <body>
+
+    <!-- =========================================================
+         SIDEBAR
+         ========================================================= -->
 
     <aside class="sidebar">
 
-        <a
-            href="{% url 'dashboard' %}"
-            class="sidebar-brand"
-        >
+        <a href="{% url 'dashboard' %}" class="sidebar-brand" aria-label="LogLens Dashboard">
+
             <i class="bi bi-activity me-2"></i>
+
             <span>LogLens</span>
+
         </a>
+
 
         <nav class="sidebar-nav">
 
-            <a
-                href="{% url 'dashboard' %}"
-                class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}"
-            >
+            <!-- Dashboard -->
+
+            <a href="{% url 'dashboard' %}"
+                class="nav-link{% if request.resolver_match.url_name == 'dashboard' %} active{% endif %}">
                 <i class="bi bi-grid-1x2"></i>
                 <span>Dashboard</span>
             </a>
 
-            <a
-                href="{% url 'ingestion:upload' %}"
-                class="nav-link {% if request.resolver_match.app_name == 'ingestion' %}active{% endif %}"
-            >
+
+            <!-- Files -->
+
+            <a href="{% url 'ingestion:upload' %}"
+                class="nav-link{% if request.resolver_match.app_name == 'ingestion' %} active{% endif %}">
                 <i class="bi bi-file-earmark-arrow-up"></i>
                 <span>Files</span>
             </a>
 
-            <a
-                href="{% url 'search:run' %}"
-                class="nav-link {% if request.resolver_match.url_name == 'run' and request.resolver_match.app_name == 'search' %}active{% endif %}"
-            >
+
+            <!-- Search -->
+
+            <a href="{% url 'search:run' %}"
+                class="nav-link{% if request.resolver_match.app_name == 'search' and request.resolver_match.url_name == 'run' %} active{% endif %}">
                 <i class="bi bi-search"></i>
                 <span>Search</span>
             </a>
 
-            <a
-                href="{% url 'search:error-groups' %}"
-                class="nav-link {% if request.resolver_match.url_name == 'error-groups' %}active{% endif %}"
-            >
+
+            <!-- Error Groups -->
+
+            <a href="{% url 'search:error-groups' %}"
+                class="nav-link{% if request.resolver_match.app_name == 'search' and request.resolver_match.url_name == 'error-groups' %} active{% endif %}">
                 <i class="bi bi-exclamation-triangle"></i>
                 <span>Error Groups</span>
             </a>
 
-            <a
-                href="{% url 'benchmarks:run' %}"
-                class="nav-link {% if request.resolver_match.app_name == 'benchmarks' %}active{% endif %}"
-            >
-                <i class="bi bi-speedometer2"></i>
-                <span>Benchmarks</span>
-            </a>
 
-            <a
-                href="{% url 'search:indicators' %}"
-                class="nav-link {% if request.resolver_match.url_name == 'indicators' %}active{% endif %}"
-            >
+            <!-- Indicators -->
+
+            <a href="{% url 'search:indicators' %}"
+                class="nav-link{% if request.resolver_match.app_name == 'search' and request.resolver_match.url_name == 'indicators' %} active{% endif %}">
                 <i class="bi bi-shield-check"></i>
                 <span>Indicators</span>
             </a>
 
-            <a
-                href="#"
-                class="nav-link"
-            >
+
+            <div class="sidebar-nav-label mt-3">
+                Analysis
+            </div>
+
+
+            <!-- Benchmarks -->
+
+            <a href="{% url 'benchmarks:run' %}"
+                class="nav-link{% if request.resolver_match.app_name == 'benchmarks' %} active{% endif %}">
+                <i class="bi bi-speedometer2"></i>
+                <span>Benchmarks</span>
+            </a>
+
+
+            <!-- Reports currently has no index route.
+                 Keep it visible but disabled until the reports
+                 index/list view is implemented. -->
+
+            <span class="nav-link disabled" aria-disabled="true"
+                title="Reports index will be available after report listing is implemented.">
                 <i class="bi bi-file-earmark-bar-graph"></i>
                 <span>Reports</span>
-            </a>
+            </span>
 
         </nav>
 
     </aside>
 
+
+    <!-- Mobile overlay -->
+
+    <div class="sidebar-overlay" id="sidebarOverlay" aria-hidden="true"></div>
+
+
+    <!-- =========================================================
+         MAIN APPLICATION
+         ========================================================= -->
+
     <div class="main-wrapper">
+
+
+        <!-- =====================================================
+             TOPBAR
+             ===================================================== -->
 
         <header class="topbar">
 
-            <div>
-                <strong>
+            <div class="d-flex align-items-center gap-2">
+
+                <button type="button" class="sidebar-toggle" id="sidebarToggle" aria-label="Open navigation"
+                    aria-expanded="false" aria-controls="loglensSidebar">
+                    <i class="bi bi-list"></i>
+                </button>
+
+
+                <span class="topbar-brand">
                     {% block topbar_title %}LogLens{% endblock %}
-                </strong>
+                </span>
+
             </div>
 
-            <div class="d-flex align-items-center gap-3">
+
+            <div class="topbar-user">
 
                 {% if request.user.is_authenticated %}
 
-                    <span class="text-muted small">
-                        {{ request.user.username }}
-                    </span>
+                <span class="topbar-username">
+                    {{ request.user.username }}
+                </span>
 
-                    <a
-                        href="{% url 'admin:logout' %}"
-                        class="btn btn-sm btn-outline-secondary"
-                    >
-                        Logout
-                    </a>
+                <a href="{% url 'admin:logout' %}" class="btn btn-sm btn-outline-secondary">
+                    Logout
+                </a>
 
                 {% endif %}
 
             </div>
 
         </header>
+
+
+        <!-- =====================================================
+             PAGE CONTENT
+             ===================================================== -->
 
         <main class="content">
 
@@ -261,35 +704,43 @@
                     {% block page_title %}LogLens{% endblock %}
                 </h1>
 
+                {% block page_subtitle_wrapper %}
+
                 <p>
                     {% block page_subtitle %}{% endblock %}
                 </p>
 
+                {% endblock %}
+
             </div>
+
+
+            <!-- Django messages -->
 
             {% if messages %}
 
+            <div class="mb-4">
+
                 {% for message in messages %}
 
-                    <div
-                        class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show"
-                        role="alert"
-                    >
+                <div class="alert
+                                alert-{{ message.tags|default:'info' }}
+                                alert-dismissible
+                                fade
+                                show" role="alert">
 
-                        {{ message }}
+                    {{ message }}
 
-                        <button
-                            type="button"
-                            class="btn-close"
-                            data-bs-dismiss="alert"
-                            aria-label="Close"
-                        ></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
 
-                    </div>
+                </div>
 
                 {% endfor %}
 
+            </div>
+
             {% endif %}
+
 
             {% block content %}
             {% endblock %}
@@ -298,11 +749,109 @@
 
     </div>
 
-    <script
-        src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
-    ></script>
+
+    <!-- =========================================================
+         BOOTSTRAP
+         ========================================================= -->
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+
+    <!-- =========================================================
+         LOG LENS UI
+         ========================================================= -->
+
+    <script>
+
+        (function () {
+
+            const body = document.body;
+            const toggle = document.getElementById("sidebarToggle");
+            const overlay = document.getElementById("sidebarOverlay");
+
+            if (!toggle || !overlay) {
+                return;
+            }
+
+            function closeSidebar() {
+
+                body.classList.remove("sidebar-open");
+
+                toggle.setAttribute(
+                    "aria-expanded",
+                    "false"
+                );
+
+            }
+
+            function openSidebar() {
+
+                body.classList.add("sidebar-open");
+
+                toggle.setAttribute(
+                    "aria-expanded",
+                    "true"
+                );
+
+            }
+
+            toggle.addEventListener(
+                "click",
+                function () {
+
+                    if (body.classList.contains("sidebar-open")) {
+                        closeSidebar();
+                    } else {
+                        openSidebar();
+                    }
+
+                }
+            );
+
+            overlay.addEventListener(
+                "click",
+                closeSidebar
+            );
+
+
+            document
+                .querySelectorAll(".sidebar .nav-link:not(.disabled)")
+                .forEach(function (link) {
+
+                    link.addEventListener(
+                        "click",
+                        function () {
+
+                            if (
+                                window.innerWidth <= 991.98
+                            ) {
+                                closeSidebar();
+                            }
+
+                        }
+                    );
+
+                });
+
+
+            window.addEventListener(
+                "resize",
+                function () {
+
+                    if (window.innerWidth > 991.98) {
+                        closeSidebar();
+                    }
+
+                }
+            );
+
+        })();
+
+    </script>
+
 
     {% block extra_js %}{% endblock %}
 
 </body>
+
 </html>

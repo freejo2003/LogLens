@@ -1,356 +1,403 @@
 {% extends "base.html" %}
 
-{% block title %}Indicators{% endblock %}
+{% block title %}Indicators — LogLens{% endblock %}
 
 {% block page_title %}Indicators{% endblock %}
 
 {% block page_subtitle %}
-Define reusable log indicators for recurring patterns and conditions.
+Review configurable security and operational indicators detected in extracted logs.
 {% endblock %}
+
 
 {% block content %}
 
-<div class="row g-4">
+<!-- Indicator Rules -->
 
-    <!-- Create Indicator -->
-    <div class="col-xl-5">
+<div class="loglens-card mb-4">
 
-        <div class="card border-0 shadow-sm h-100">
+    <div class="p-4 border-bottom">
 
-            <div class="card-body p-4">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
 
-                <div class="d-flex align-items-start gap-3 mb-4">
+            <div class="d-flex align-items-center gap-3">
 
-                    <div class="rounded-3 bg-primary-subtle text-primary p-3">
-                        <i class="bi bi-funnel fs-4"></i>
-                    </div>
+                <div class="bg-warning-subtle text-warning rounded-3 p-2">
+                    <i class="bi bi-shield-check fs-5"></i>
+                </div>
 
-                    <div>
-                        <h5 class="fw-semibold mb-1">
-                            Create Indicator
-                        </h5>
+                <div>
 
-                        <p class="text-muted small mb-0">
-                            Define a literal pattern that LogLens can use
-                            as a reusable analysis indicator.
-                        </p>
-                    </div>
+                    <h2 class="h5 mb-1">
+                        Indicator Rules
+                    </h2>
+
+                    <p class="text-secondary small mb-0">
+                        Configured patterns used to identify notable log events.
+                    </p>
 
                 </div>
 
-                <form method="post"
-                      action="{% url 'search:indicator-create' %}">
+            </div>
 
-                    {% csrf_token %}
 
-                    {% if form.non_field_errors %}
-                        <div class="alert alert-danger small">
-                            {{ form.non_field_errors }}
-                        </div>
-                    {% endif %}
+            {% if indicators %}
 
-                    <!-- Workspace -->
-                    <div class="mb-3">
+                <span class="badge text-bg-secondary">
+                    {{ indicators|length }}
+                    indicator{{ indicators|length|pluralize }}
+                </span>
 
-                        <label for="{{ form.workspace.id_for_label }}"
-                               class="form-label fw-medium">
-                            Workspace
-                        </label>
+            {% endif %}
 
-                        {{ form.workspace }}
+        </div>
 
-                        {% if form.workspace.errors %}
-                            <div class="text-danger small mt-1">
-                                {{ form.workspace.errors }}
-                            </div>
-                        {% endif %}
+    </div>
 
-                    </div>
 
-                    <!-- Indicator Name -->
-                    <div class="mb-3">
+    {% if indicators %}
 
-                        <label for="{{ form.name.id_for_label }}"
-                               class="form-label fw-medium">
-                            Indicator name
-                        </label>
+        <div class="table-responsive">
 
-                        {{ form.name }}
+            <table class="table table-hover align-middle mb-0 loglens-table">
 
-                        <div class="form-text">
-                            Use a short descriptive name.
-                        </div>
+                <thead>
 
-                        {% if form.name.errors %}
-                            <div class="text-danger small mt-1">
-                                {{ form.name.errors }}
-                            </div>
-                        {% endif %}
+                    <tr>
 
-                    </div>
+                        <th class="ps-4">
+                            Indicator
+                        </th>
 
-                    <!-- Pattern -->
-                    <div class="mb-3">
+                        <th>
+                            Pattern
+                        </th>
 
-                        <label for="{{ form.pattern.id_for_label }}"
-                               class="form-label fw-medium">
-                            Literal pattern
-                        </label>
-
-                        {{ form.pattern }}
-
-                        <div class="form-text">
-                            Matching is literal and case-sensitive.
-                        </div>
-
-                        {% if form.pattern.errors %}
-                            <div class="text-danger small mt-1">
-                                {{ form.pattern.errors }}
-                            </div>
-                        {% endif %}
-
-                    </div>
-
-                    <!-- Description -->
-                    <div class="mb-3">
-
-                        <label for="{{ form.description.id_for_label }}"
-                               class="form-label fw-medium">
+                        <th>
                             Description
-                        </label>
+                        </th>
 
-                        {{ form.description }}
+                        <th>
+                            Status
+                        </th>
 
-                        <div class="form-text">
-                            Optional explanation of what this indicator detects.
-                        </div>
+                        <th class="text-end pe-4">
+                            Action
+                        </th>
 
-                        {% if form.description.errors %}
-                            <div class="text-danger small mt-1">
-                                {{ form.description.errors }}
-                            </div>
-                        {% endif %}
+                    </tr>
 
-                    </div>
+                </thead>
 
-                    <!-- Active -->
-                    <div class="form-check mb-4">
 
-                        {{ form.is_active }}
+                <tbody>
 
-                        <label class="form-check-label"
-                               for="{{ form.is_active.id_for_label }}">
-                            Active indicator
-                        </label>
+                    {% for indicator in indicators %}
 
-                        {% if form.is_active.errors %}
-                            <div class="text-danger small mt-1">
-                                {{ form.is_active.errors }}
-                            </div>
-                        {% endif %}
+                        <tr>
 
-                    </div>
+                            <!-- Indicator -->
 
-                    <button type="submit"
-                            class="btn btn-primary w-100">
+                            <td class="ps-4">
 
-                        <i class="bi bi-plus-circle me-2"></i>
-                        Create Indicator
+                                <div class="fw-semibold text-break">
+                                    {{ indicator.name }}
+                                </div>
 
-                    </button>
+                                {% if indicator.category %}
 
-                </form>
+                                    <div class="small text-secondary">
+                                        {{ indicator.category }}
+                                    </div>
 
-            </div>
+                                {% endif %}
+
+                            </td>
+
+
+                            <!-- Pattern -->
+
+                            <td>
+
+                                <code class="small text-break">
+                                    {{ indicator.pattern }}
+                                </code>
+
+                            </td>
+
+
+                            <!-- Description -->
+
+                            <td>
+
+                                {% if indicator.description %}
+
+                                    <div
+                                        class="small text-secondary text-break"
+                                        style="max-width: 420px;"
+                                    >
+                                        {{ indicator.description }}
+                                    </div>
+
+                                {% else %}
+
+                                    <span class="text-secondary small">
+                                        No description available.
+                                    </span>
+
+                                {% endif %}
+
+                            </td>
+
+
+                            <!-- Status -->
+
+                            <td>
+
+                                {% if indicator.enabled %}
+
+                                    <span class="badge rounded-pill text-bg-success">
+                                        Active
+                                    </span>
+
+                                {% else %}
+
+                                    <span class="badge rounded-pill text-bg-secondary">
+                                        Inactive
+                                    </span>
+
+                                {% endif %}
+
+                            </td>
+
+
+                            <!-- Action -->
+
+                            <td class="text-end pe-4">
+
+                                {% if indicator.id %}
+
+                                    <a
+                                        href="?indicator={{ indicator.id }}"
+                                        class="btn btn-sm btn-outline-primary"
+                                    >
+                                        <i class="bi bi-eye me-1"></i>
+                                        Inspect
+                                    </a>
+
+                                {% endif %}
+
+                            </td>
+
+                        </tr>
+
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
 
         </div>
 
-    </div>
 
+    {% else %}
 
-    <!-- Indicator Library -->
-    <div class="col-xl-7">
+        <!-- Empty State -->
 
-        <div class="card border-0 shadow-sm">
+        <div class="p-5 text-center">
 
-            <div class="card-body p-4">
-
-                <div class="d-flex justify-content-between align-items-center mb-4">
-
-                    <div>
-
-                        <h5 class="fw-semibold mb-1">
-                            Indicator Library
-                        </h5>
-
-                        <p class="text-muted small mb-0">
-                            Reusable patterns available in your workspace.
-                        </p>
-
-                    </div>
-
-                    <span class="badge text-bg-light border">
-                        {{ indicator_rules|length }} indicator{{ indicator_rules|length|pluralize }}
-                    </span>
-
-                </div>
-
-
-                {% if indicator_rules %}
-
-                    <div class="table-responsive">
-
-                        <table class="table align-middle mb-0">
-
-                            <thead>
-
-                                <tr class="small text-muted">
-
-                                    <th scope="col">
-                                        Indicator
-                                    </th>
-
-                                    <th scope="col">
-                                        Pattern
-                                    </th>
-
-                                    <th scope="col">
-                                        Workspace
-                                    </th>
-
-                                    <th scope="col">
-                                        Status
-                                    </th>
-
-                                </tr>
-
-                            </thead>
-
-                            <tbody>
-
-                                {% for indicator in indicator_rules %}
-
-                                    <tr>
-
-                                        <td>
-
-                                            <div class="fw-semibold">
-                                                {{ indicator.name }}
-                                            </div>
-
-                                            {% if indicator.description %}
-
-                                                <div class="text-muted small mt-1">
-                                                    {{ indicator.description }}
-                                                </div>
-
-                                            {% endif %}
-
-                                        </td>
-
-                                        <td>
-
-                                            <code class="small">
-                                                {{ indicator.pattern }}
-                                            </code>
-
-                                        </td>
-
-                                        <td>
-
-                                            <span class="small">
-                                                {{ indicator.workspace.name }}
-                                            </span>
-
-                                        </td>
-
-                                        <td>
-
-                                            {% if indicator.is_active %}
-
-                                                <span class="badge rounded-pill text-bg-success">
-                                                    Active
-                                                </span>
-
-                                            {% else %}
-
-                                                <span class="badge rounded-pill text-bg-secondary">
-                                                    Inactive
-                                                </span>
-
-                                            {% endif %}
-
-                                        </td>
-
-                                    </tr>
-
-                                {% endfor %}
-
-                            </tbody>
-
-                        </table>
-
-                    </div>
-
-                {% else %}
-
-                    <div class="text-center py-5">
-
-                        <div class="mb-3 text-muted">
-
-                            <i class="bi bi-funnel fs-1"></i>
-
-                        </div>
-
-                        <h6 class="fw-semibold">
-                            No indicators yet
-                        </h6>
-
-                        <p class="text-muted small mb-0">
-                            Create your first indicator using the form.
-                        </p>
-
-                    </div>
-
-                {% endif %}
-
+            <div
+                class="bg-secondary-subtle text-secondary rounded-circle d-inline-flex align-items-center justify-content-center mb-3"
+                style="width: 64px; height: 64px;"
+            >
+                <i class="bi bi-shield-check fs-3"></i>
             </div>
+
+            <h3 class="h5 mb-2">
+                No indicators configured
+            </h3>
+
+            <p class="text-secondary mb-4">
+                No indicator rules are currently available for the workspace.
+            </p>
+
+            <a
+                href="{% url 'search:run' %}"
+                class="btn btn-primary"
+            >
+                <i class="bi bi-search me-1"></i>
+                Search Logs
+            </a>
 
         </div>
 
-    </div>
+    {% endif %}
 
 </div>
 
 
-<!-- Explanation -->
-<div class="card border-0 shadow-sm mt-4">
+<!-- Information -->
 
-    <div class="card-body p-4">
+<div class="row g-4">
 
-        <div class="d-flex gap-3">
+    <!-- Indicator Concepts -->
 
-            <div class="text-primary">
-                <i class="bi bi-info-circle fs-4"></i>
+    <div class="col-12 col-lg-7">
+
+        <div class="loglens-card h-100">
+
+            <div class="p-4 border-bottom">
+
+                <h2 class="h5 mb-1">
+                    Indicator Detection
+                </h2>
+
+                <p class="text-secondary small mb-0">
+                    Indicators provide explainable pattern-based signals
+                    during log analysis.
+                </p>
+
             </div>
 
-            <div>
 
-                <h6 class="fw-semibold mb-2">
-                    How indicators work
-                </h6>
+            <div class="p-4">
 
-                <p class="text-muted small mb-2">
-                    An indicator is a reusable literal search pattern.
-                    It can represent a recurring condition that you want
-                    to identify across log data.
+                <!-- Pattern Detection -->
+
+                <div class="d-flex gap-3 mb-4">
+
+                    <div class="text-warning">
+                        <i class="bi bi-search fs-4"></i>
+                    </div>
+
+                    <div>
+
+                        <div class="fw-semibold mb-1">
+                            Pattern-based detection
+                        </div>
+
+                        <div class="small text-secondary">
+                            Indicator rules identify configured literal
+                            patterns within extracted log content.
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <!-- Explainable Results -->
+
+                <div class="d-flex gap-3 mb-4">
+
+                    <div class="text-warning">
+                        <i class="bi bi-info-circle fs-4"></i>
+                    </div>
+
+                    <div>
+
+                        <div class="fw-semibold mb-1">
+                            Explainable results
+                        </div>
+
+                        <div class="small text-secondary">
+                            Detected indicators can be traced back to the
+                            matching source text and its source location.
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <!-- Configurable Rules -->
+
+                <div class="d-flex gap-3">
+
+                    <div class="text-warning">
+                        <i class="bi bi-sliders fs-4"></i>
+                    </div>
+
+                    <div>
+
+                        <div class="fw-semibold mb-1">
+                            Configurable rules
+                        </div>
+
+                        <div class="small text-secondary">
+                            Indicator definitions can represent operational,
+                            security, or application-specific signals.
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- Related Workflows -->
+
+    <div class="col-12 col-lg-5">
+
+        <div class="loglens-card h-100">
+
+            <div class="p-4 border-bottom">
+
+                <h2 class="h5 mb-1">
+                    Related Workflows
+                </h2>
+
+                <p class="text-secondary small mb-0">
+                    Continue analysing the uploaded log corpus.
                 </p>
 
-                <p class="text-muted small mb-0">
-                    Examples include database connection failures,
-                    authentication failures, HTTP 500 responses, and
-                    timeout messages.
-                </p>
+            </div>
+
+
+            <div class="p-4">
+
+                <div class="d-grid gap-2">
+
+                    <a
+                        href="{% url 'search:run' %}"
+                        class="btn btn-outline-primary text-start"
+                    >
+                        <i class="bi bi-search me-2"></i>
+                        Search Logs
+                    </a>
+
+
+                    <a
+                        href="{% url 'search:error-groups' %}"
+                        class="btn btn-outline-secondary text-start"
+                    >
+                        <i class="bi bi-collection me-2"></i>
+                        Error Groups
+                    </a>
+
+
+                    <a
+                        href="{% url 'ingestion:upload' %}"
+                        class="btn btn-outline-secondary text-start"
+                    >
+                        <i class="bi bi-cloud-arrow-up me-2"></i>
+                        Upload Files
+                    </a>
+
+
+                    <a
+                        href="{% url 'benchmarks:run' %}"
+                        class="btn btn-outline-secondary text-start"
+                    >
+                        <i class="bi bi-speedometer2 me-2"></i>
+                        Algorithm Benchmark
+                    </a>
+
+                </div>
 
             </div>
 

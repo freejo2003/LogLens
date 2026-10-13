@@ -1,162 +1,366 @@
 {% extends "base.html" %}
 
-{% block title %}Error Groups | LogLens{% endblock %}
+{% block title %}Error Groups — LogLens{% endblock %}
 
 {% block page_title %}Error Groups{% endblock %}
 
 {% block page_subtitle %}
-Recurring ERROR and WARN patterns grouped from extracted log entries.
+Recurring ERROR and WARN messages grouped into deterministic templates.
 {% endblock %}
+
 
 {% block content %}
 
-<div class="row g-4">
+<!-- Error Groups -->
 
-    <div class="col-12">
+<div class="loglens-card mb-4">
 
-        <div class="card shadow-sm">
+    <div class="p-4 border-bottom">
 
-            <div class="card-body">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
 
-                <div class="d-flex justify-content-between align-items-center mb-3">
+            <div class="d-flex align-items-center gap-3">
 
-                    <div>
-                        <h5 class="card-title mb-1">
-                            Recurring Error Groups
-                        </h5>
+                <div class="bg-danger-subtle text-danger rounded-3 p-2">
+                    <i class="bi bi-collection fs-5"></i>
+                </div>
 
-                        <p class="text-muted mb-0">
-                            Groups are created from ERROR and WARN log entries.
-                            INFO entries are excluded.
-                        </p>
-                    </div>
+                <div>
 
-                    <span class="badge text-bg-secondary">
-                        {{ error_groups|length }} groups
-                    </span>
+                    <h2 class="h5 mb-1">
+                        Recurring Error Groups
+                    </h2>
+
+                    <p class="text-secondary small mb-0">
+                        Review normalized recurring log message patterns.
+                    </p>
 
                 </div>
 
-                {% if error_groups %}
+            </div>
 
-                    <div class="table-responsive">
 
-                        <table class="table table-hover align-middle mb-0">
+            {% if error_groups %}
 
-                            <thead>
-                                <tr>
-                                    <th scope="col">
-                                        Error Pattern
-                                    </th>
+                <span class="badge text-bg-secondary">
+                    {{ error_groups|length }}
+                    group{{ error_groups|length|pluralize }}
+                </span>
 
-                                    <th scope="col">
-                                        Workspace
-                                    </th>
+            {% endif %}
 
-                                    <th scope="col">
-                                        Occurrences
-                                    </th>
+        </div>
 
-                                    <th scope="col">
-                                        Affected Entries
-                                    </th>
-                                </tr>
-                            </thead>
+    </div>
 
-                            <tbody>
 
-                                {% for group in error_groups %}
+    {% if error_groups %}
 
-                                    <tr>
+        <div class="table-responsive">
 
-                                        <td>
-                                            <strong>
-                                                {{ group.name }}
-                                            </strong>
+            <table class="table table-hover align-middle mb-0 loglens-table">
 
-                                            <div class="small text-muted mt-1">
-                                                {{ group.normalized_message }}
-                                            </div>
-                                        </td>
+                <thead>
 
-                                        <td>
-                                            {{ group.workspace.name }}
-                                        </td>
+                    <tr>
 
-                                        <td>
-                                            <span class="badge text-bg-danger">
-                                                {{ group.occurrence_count }}
-                                            </span>
-                                        </td>
+                        <th class="ps-4">
+                            Group
+                        </th>
 
-                                        <td>
+                        <th>
+                            Workspace
+                        </th>
 
-                                            <ul class="list-unstyled mb-0">
+                        <th>
+                            Template
+                        </th>
 
-                                                {% for member in group.members.all %}
+                        <th>
+                            Occurrences
+                        </th>
 
-                                                    <li class="mb-2">
+                    </tr>
 
-                                                        <div>
-                                                            <strong>
-                                                                {{ member.source_file.original_name }}
-                                                            </strong>
-                                                        </div>
+                </thead>
 
-                                                        <div class="small text-muted">
-                                                            Line
-                                                            {{ member.segment.line_number|default:member.segment.sequence }}
-                                                        </div>
 
-                                                        <div class="small text-body-secondary text-truncate"
-                                                             style="max-width: 600px;">
-                                                            {{ member.segment.text }}
-                                                        </div>
+                <tbody>
 
-                                                    </li>
+                    {% for group in error_groups %}
 
-                                                {% empty %}
+                        <tr>
 
-                                                    <li class="text-muted">
-                                                        No entries available.
-                                                    </li>
+                            <!-- Group -->
 
-                                                {% endfor %}
+                            <td class="ps-4">
 
-                                            </ul>
+                                <div class="fw-semibold">
+                                    #{{ group.id }}
+                                </div>
 
-                                        </td>
+                                <div class="small text-secondary">
+                                    {{ group.name }}
+                                </div>
 
-                                    </tr>
+                            </td>
 
-                                {% endfor %}
 
-                            </tbody>
+                            <!-- Workspace -->
 
-                        </table>
+                            <td>
+
+                                <span class="badge rounded-pill text-bg-light border">
+                                    {{ group.workspace.name }}
+                                </span>
+
+                            </td>
+
+
+                            <!-- Normalized Template -->
+
+                            <td>
+
+                                <div
+                                    class="text-break"
+                                    style="max-width: 700px;"
+                                >
+                                    {{ group.normalized_message|default:"No normalized template available" }}
+                                </div>
+
+                            </td>
+
+
+                            <!-- Occurrence Count -->
+
+                            <td>
+
+                                <span class="fw-semibold">
+                                    {{ group.occurrence_count }}
+                                </span>
+
+                            </td>
+
+                        </tr>
+
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+
+    {% else %}
+
+        <div class="p-5 text-center">
+
+            <div
+                class="bg-success-subtle text-success rounded-circle d-inline-flex align-items-center justify-content-center mb-3"
+                style="width: 64px; height: 64px;"
+            >
+                <i class="bi bi-check2-circle fs-3"></i>
+            </div>
+
+
+            <h3 class="h5 mb-2">
+                No error groups found
+            </h3>
+
+
+            <p class="text-secondary mb-4">
+                LogLens has not found any grouped ERROR or WARN messages
+                for your available workspaces.
+            </p>
+
+
+            <a
+                href="{% url 'ingestion:upload' %}"
+                class="btn btn-primary"
+            >
+                <i class="bi bi-cloud-arrow-up me-1"></i>
+                Upload Log Files
+            </a>
+
+        </div>
+
+    {% endif %}
+
+</div>
+
+
+<!-- Grouping Explanation -->
+
+<div class="row g-4">
+
+    <div class="col-12 col-lg-7">
+
+        <div class="loglens-card h-100">
+
+            <div class="p-4 border-bottom">
+
+                <h2 class="h5 mb-1">
+                    How Grouping Works
+                </h2>
+
+                <p class="text-secondary small mb-0">
+                    LogLens groups recurring log messages using normalized
+                    message templates.
+                </p>
+
+            </div>
+
+
+            <div class="p-4">
+
+                <!-- Timestamp Normalization -->
+
+                <div class="d-flex gap-3 mb-4">
+
+                    <div class="text-primary">
+
+                        <i class="bi bi-clock-history fs-4"></i>
 
                     </div>
 
-                {% else %}
 
-                    <div class="text-center py-5">
+                    <div>
 
-                        <div class="mb-3">
-                            <i class="bi bi-check-circle fs-1"></i>
+                        <div class="fw-semibold mb-1">
+                            Timestamp normalization
                         </div>
 
-                        <h5>
-                            No error groups found
-                        </h5>
-
-                        <p class="text-muted mb-0">
-                            Upload and extract a log file to generate
-                            recurring ERROR and WARN groups.
-                        </p>
+                        <div class="small text-secondary">
+                            Variable timestamp prefixes are removed before
+                            messages are compared.
+                        </div>
 
                     </div>
 
-                {% endif %}
+                </div>
+
+
+                <!-- Variable Value Normalization -->
+
+                <div class="d-flex gap-3 mb-4">
+
+                    <div class="text-primary">
+
+                        <i class="bi bi-sliders fs-4"></i>
+
+                    </div>
+
+
+                    <div>
+
+                        <div class="fw-semibold mb-1">
+                            Variable-value normalization
+                        </div>
+
+                        <div class="small text-secondary">
+                            Variable values such as key-value fields and
+                            duration values are normalized so recurring
+                            message structures can be grouped.
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <!-- Case Normalization -->
+
+                <div class="d-flex gap-3">
+
+                    <div class="text-primary">
+
+                        <i class="bi bi-fonts fs-4"></i>
+
+                    </div>
+
+
+                    <div>
+
+                        <div class="fw-semibold mb-1">
+                            Case normalization
+                        </div>
+
+                        <div class="small text-secondary">
+                            Case differences are normalized so equivalent
+                            message templates can be grouped together.
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- Related Workflows -->
+
+    <div class="col-12 col-lg-5">
+
+        <div class="loglens-card h-100">
+
+            <div class="p-4 border-bottom">
+
+                <h2 class="h5 mb-1">
+                    Related Workflows
+                </h2>
+
+                <p class="text-secondary small mb-0">
+                    Continue analysing your log corpus.
+                </p>
+
+            </div>
+
+
+            <div class="p-4">
+
+                <div class="d-grid gap-2">
+
+                    <a
+                        href="{% url 'search:run' %}"
+                        class="btn btn-outline-primary text-start"
+                    >
+                        <i class="bi bi-search me-2"></i>
+                        Search Logs
+                    </a>
+
+
+                    <a
+                        href="{% url 'search:indicators' %}"
+                        class="btn btn-outline-secondary text-start"
+                    >
+                        <i class="bi bi-shield-check me-2"></i>
+                        View Indicators
+                    </a>
+
+
+                    <a
+                        href="{% url 'benchmarks:run' %}"
+                        class="btn btn-outline-secondary text-start"
+                    >
+                        <i class="bi bi-speedometer2 me-2"></i>
+                        Run Benchmark
+                    </a>
+
+
+                    <a
+                        href="{% url 'ingestion:upload' %}"
+                        class="btn btn-outline-secondary text-start"
+                    >
+                        <i class="bi bi-cloud-arrow-up me-2"></i>
+                        Upload Files
+                    </a>
+
+                </div>
 
             </div>
 
