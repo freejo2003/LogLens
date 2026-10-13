@@ -105,7 +105,36 @@ class AlgorithmMetric(models.Model):
         default="1.0",
     )
 
+    # Representative timing. This remains the public timing field
+    # used by the existing benchmark/reporting code.
     elapsed_seconds = models.FloatField()
+
+    # Repeated-trial methodology metadata.
+    warmup_runs = models.PositiveIntegerField(
+        default=0,
+    )
+
+    trial_count = models.PositiveIntegerField(
+        default=1,
+    )
+
+    # Statistical timing summary.
+    median_seconds = models.FloatField(
+        default=0.0,
+    )
+
+    minimum_seconds = models.FloatField(
+        default=0.0,
+    )
+
+    maximum_seconds = models.FloatField(
+        default=0.0,
+    )
+
+    # Raw measured trial timings retained for reproducibility.
+    trial_times_seconds = models.JSONField(
+        default=list,
+    )
 
     match_count = models.PositiveIntegerField()
 

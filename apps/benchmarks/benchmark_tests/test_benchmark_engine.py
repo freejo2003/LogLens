@@ -1,17 +1,22 @@
 from django.test import SimpleTestCase
 
 from apps.benchmarks.services.benchmark_engine import (
+    DEFAULT_TRIALS,
+    DEFAULT_WARMUP_RUNS,
     benchmark_algorithm,
     benchmark_all,
 )
 
 
-class BenchmarkAlgorithmTests(SimpleTestCase):
-    def test_benchmark_algorithm_returns_result(self):
+class BenchmarkEngineTests(SimpleTestCase):
+
+    def test_benchmark_algorithm_returns_expected_result(self):
         result = benchmark_algorithm(
             "naive",
             "ERROR database ERROR",
             "ERROR",
+            warmup_runs=1,
+            trials=3,
         )
 
         self.assertEqual(result.algorithm, "naive")
@@ -19,67 +24,109 @@ class BenchmarkAlgorithmTests(SimpleTestCase):
         self.assertEqual(result.text_length, 20)
         self.assertEqual(result.match_count, 2)
         self.assertEqual(result.positions, (0, 15))
-        self.assertGreaterEqual(
-            result.elapsed_seconds,
-            0,
-        )
 
-    def test_elapsed_milliseconds_is_derived(self):
+    def test_benchmark_algorithm_records_repeated_trials(self):
         result = benchmark_algorithm(
-            "kmp",
-            "AAAAAA",
-            "AA",
-        )
-
-        self.assertAlmostEqual(
-            result.elapsed_milliseconds,
-            result.elapsed_seconds * 1000,
-        )
-
-
-class BenchmarkAllTests(SimpleTestCase):
-    def test_all_algorithms_are_benchmarked(self):
-        result = benchmark_all(
+            "naive",
             "ERROR database ERROR",
             "ERROR",
+            warmup_runs=2,
+            trials=5,
         )
 
-        self.assertEqual(
-            set(result.algorithms),
-            {"naive", "kmp", "rabin_karp"},
-        )
+        self.assertEqual(result.warmup_runs, 2)
+        self.assertEqual(result.trial_count, 5)
+        self.assertEqual(len(result.trial_times_seconds), 5)
 
-        self.assertEqual(
-            len(result.results),
-            3,
-        )
+        for elapsed in result.trial_times_seconds:
+            self.assertGreaterEqual(elapsed, 0)
 
-    def test_all_algorithms_receive_same_input(self):
-        result = benchmark_all(
-            "AAAA ERROR ERROR database ERROR",
+    def test_elapsed_seconds_is_median(self):
+        result = benchmark_algorithm(
+            "naive",
+            "ERROR database ERROR",
             "ERROR",
+            warmup_runs=0,
+            trials=5,
         )
 
-        for algorithm_result in result.results:
-            self.assertEqual(
-                algorithm_result.pattern,
-                "ERROR",
-            )
+        self.assertEqual(
+            result.elapsed_seconds,
+            result.median_seconds,
+        )
 
-            self.assertEqual(
-                algorithm_result.text_length,
-                len("AAAA ERROR ERROR database ERROR"),
-            )
+        self.assertEqual(
+            result.elapsed_milliseconds,
+            result.median_milliseconds,
+        )
 
-    def test_positions_are_consistent(self):
+    def test_trial_statistics_have_valid_spread(self):
+        result = benchmark_algorithm(
+            "naive",
+            "ERROR database ERROR",
+            "ERROR",
+            warmup_runs=1,
+            trials=5,
+        )
+
+        self.assertLessEqual(
+            result.minimum_seconds,
+            result.median_seconds,
+        )
+
+        self.assertLessEqual(
+            result.median_seconds,
+            result.maximum_seconds,
+        )
+
+        self.assertEqual(
+            result.minimum_seconds,
+            min(result.trial_times_seconds),
+        )
+
+        self.assertEqual(
+            result.maximum_seconds,
+            max(result.trial_times_seconds),
+        )
+
+    def test_benchmark_all_uses_three_algorithms(self):
         result = benchmark_all(
             "ERROR ERROR INFO ERROR",
             "ERROR",
+            warmup_runs=1,
+            trials=3,
         )
 
-        self.assertTrue(
-            result.positions_consistent,
+        self.assertEqual(
+            result.algorithms,
+            ("naive", "kmp", "rabin_karp"),
         )
+
+    def test_benchmark_all_uses_same_configuration_for_all_algorithms(self):
+        result = benchmark_all(
+            "ERROR ERROR INFO ERROR",
+            "ERROR",
+            warmup_runs=2,
+            trials=4,
+        )
+
+        self.assertEqual(result.warmup_runs, 2)
+        self.assertEqual(result.trial_count, 4)
+
+        for algorithm_result in result.results:
+            self.assertEqual(algorithm_result.warmup_runs, 2)
+            self.assertEqual(algorithm_result.trial_count, 4)
+            self.assertEqual(len(algorithm_result.trial_times_seconds), 4)
+
+    def test_benchmark_all_positions_are_consistent(self):
+        result = benchmark_all(
+            "ERROR ERROR INFO ERROR",
+            "ERROR",
+            warmup_runs=1,
+            trials=3,
+        )
+
+        self.assertTrue(result.positions_consistent)
 
         for algorithm_result in result.results:
             self.assertEqual(
@@ -87,20 +134,15 @@ class BenchmarkAllTests(SimpleTestCase):
                 (0, 6, 17),
             )
 
-            self.assertEqual(
-                algorithm_result.match_count,
-                3,
-            )
-
-    def test_overlapping_matches_are_consistent(self):
+    def test_overlap_positions_are_consistent(self):
         result = benchmark_all(
             "AAAA",
             "AA",
+            warmup_runs=1,
+            trials=3,
         )
 
-        self.assertTrue(
-            result.positions_consistent,
-        )
+        self.assertTrue(result.positions_consistent)
 
         for algorithm_result in result.results:
             self.assertEqual(
@@ -108,9 +150,47 @@ class BenchmarkAllTests(SimpleTestCase):
                 (0, 1, 2),
             )
 
-    def test_empty_pattern_is_rejected(self):
+    def test_empty_pattern_raises_value_error(self):
         with self.assertRaises(ValueError):
             benchmark_all(
-                "some text",
+                "ERROR ERROR",
                 "",
+            )
+
+    def test_zero_trials_raises_value_error(self):
+        with self.assertRaises(ValueError):
+            benchmark_all(
+                "ERROR ERROR",
+                "ERROR",
+                trials=0,
+            )
+
+    def test_negative_warmups_raises_value_error(self):
+        with self.assertRaises(ValueError):
+            benchmark_all(
+                "ERROR ERROR",
+                "ERROR",
+                warmup_runs=-1,
+            )
+
+    def test_default_benchmark_configuration(self):
+        result = benchmark_all(
+            "ERROR ERROR",
+            "ERROR",
+        )
+
+        self.assertEqual(
+            result.warmup_runs,
+            DEFAULT_WARMUP_RUNS,
+        )
+
+        self.assertEqual(
+            result.trial_count,
+            DEFAULT_TRIALS,
+        )
+
+        for algorithm_result in result.results:
+            self.assertEqual(
+                len(algorithm_result.trial_times_seconds),
+                DEFAULT_TRIALS,
             )

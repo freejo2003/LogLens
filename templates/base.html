@@ -2,509 +2,307 @@
 
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
+
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>{% block title %}LogLens{% endblock %}</title>
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1"
+    >
 
-    <!-- Bootstrap -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>
+        {% block title %}LogLens{% endblock %}
+    </title>
 
-    <!-- Bootstrap Icons -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+        rel="stylesheet"
+    >
+
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"
+        rel="stylesheet"
+    >
 
     <style>
-        :root {
-            --loglens-sidebar-width: 250px;
-            --loglens-border: #e5e7eb;
-            --loglens-muted: #6b7280;
-            --loglens-bg: #f8fafc;
-            --loglens-sidebar: #111827;
-            --loglens-sidebar-hover: #1f2937;
-            --loglens-sidebar-active: #374151;
-        }
 
         body {
-            margin: 0;
-            background: var(--loglens-bg);
-            color: #111827;
-            font-family:
-                Inter,
-                system-ui,
-                -apple-system,
-                BlinkMacSystemFont,
-                "Segoe UI",
-                sans-serif;
-        }
-
-        .loglens-app {
             min-height: 100vh;
+            background-color: #f8f9fa;
         }
 
-        /* =========================================================
-           SIDEBAR
-           ========================================================= */
-
-        .loglens-sidebar {
+        .sidebar {
+            width: 250px;
+            min-height: 100vh;
+            background-color: #212529;
             position: fixed;
             top: 0;
             left: 0;
-            bottom: 0;
-            width: var(--loglens-sidebar-width);
-
-            background: var(--loglens-sidebar);
-            color: white;
-
-            z-index: 1030;
-
-            display: flex;
-            flex-direction: column;
+            z-index: 1000;
         }
 
-        .loglens-brand {
-            height: 72px;
-
+        .sidebar-brand {
+            height: 70px;
             display: flex;
             align-items: center;
-
-            padding: 0 24px;
-
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-        }
-
-        .loglens-brand-name {
-            font-size: 1.25rem;
-            font-weight: 700;
-            letter-spacing: -0.02em;
-        }
-
-        .loglens-brand-subtitle {
-            font-size: 0.7rem;
-            color: #9ca3af;
-            margin-left: 8px;
-        }
-
-        .loglens-nav {
-            padding: 20px 12px;
-            flex: 1;
-        }
-
-        .loglens-nav-section {
-            color: #6b7280;
-
-            font-size: 0.7rem;
-            font-weight: 700;
-
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-
-            padding: 0 12px 8px;
-        }
-
-        .loglens-nav-link {
-            display: flex;
-            align-items: center;
-
-            gap: 11px;
-
-            padding: 10px 12px;
-            margin-bottom: 3px;
-
-            border-radius: 7px;
-
-            color: #d1d5db;
+            padding: 0 1.25rem;
+            color: #ffffff;
             text-decoration: none;
-
-            font-size: 0.9rem;
-
-            transition:
-                background 0.15s ease,
-                color 0.15s ease;
-        }
-
-        .loglens-nav-link:hover {
-            background: var(--loglens-sidebar-hover);
-            color: white;
-        }
-
-        .loglens-nav-link.active {
-            background: var(--loglens-sidebar-active);
-            color: white;
+            font-size: 1.25rem;
             font-weight: 600;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        .loglens-nav-icon {
-            width: 20px;
-
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-
-            text-align: center;
-
-            font-size: 1rem;
-
-            opacity: 0.9;
+        .sidebar-nav {
+            padding: 1rem 0.75rem;
         }
 
-        .loglens-sidebar-footer {
-            padding: 16px;
-
-            border-top: 1px solid rgba(255, 255, 255, 0.08);
-
-            color: #9ca3af;
-
-            font-size: 0.75rem;
+        .sidebar .nav-link {
+            color: rgba(255, 255, 255, 0.75);
+            border-radius: 0.5rem;
+            margin-bottom: 0.25rem;
+            padding: 0.7rem 0.85rem;
         }
 
-        /* =========================================================
-           MAIN AREA
-           ========================================================= */
+        .sidebar .nav-link:hover {
+            color: #ffffff;
+            background-color: rgba(255, 255, 255, 0.08);
+        }
 
-        .loglens-main {
-            margin-left: var(--loglens-sidebar-width);
+        .sidebar .nav-link.active {
+            color: #ffffff;
+            background-color: rgba(255, 255, 255, 0.15);
+        }
+
+        .sidebar .nav-link i {
+            width: 22px;
+            margin-right: 0.5rem;
+        }
+
+        .main-wrapper {
+            margin-left: 250px;
             min-height: 100vh;
         }
 
-        /* =========================================================
-           TOP BAR
-           ========================================================= */
-
-        .loglens-topbar {
-            height: 72px;
-
-            background: white;
-
-            border-bottom: 1px solid var(--loglens-border);
-
+        .topbar {
+            height: 70px;
+            background-color: #ffffff;
+            border-bottom: 1px solid #dee2e6;
             display: flex;
             align-items: center;
             justify-content: space-between;
-
-            padding: 0 32px;
+            padding: 0 1.5rem;
         }
 
-        .loglens-page-title {
-            margin: 0;
-
-            font-size: 1.1rem;
-            font-weight: 600;
+        .content {
+            padding: 1.5rem;
         }
 
-        .loglens-workspace-label {
-            color: var(--loglens-muted);
-            font-size: 0.8rem;
+        .page-header {
+            margin-bottom: 1.5rem;
         }
 
-        /* =========================================================
-           CONTENT
-           ========================================================= */
-
-        .loglens-content {
-            padding: 32px;
-            max-width: 1600px;
+        .page-header h1 {
+            font-size: 1.75rem;
+            margin-bottom: 0.25rem;
         }
 
-        .loglens-card {
-            background: white;
-
-            border: 1px solid var(--loglens-border);
-
-            border-radius: 10px;
+        .page-header p {
+            color: #6c757d;
+            margin-bottom: 0;
         }
 
-        .loglens-muted {
-            color: var(--loglens-muted);
+        .card {
+            border: 1px solid #dee2e6;
         }
 
-        /* =========================================================
-           RESPONSIVE
-           ========================================================= */
+        @media (max-width: 768px) {
 
-        @media (max-width: 991.98px) {
-
-            .loglens-sidebar {
-                position: static;
-
-                width: 100%;
-                min-height: auto;
+            .sidebar {
+                width: 70px;
             }
 
-            .loglens-main {
-                margin-left: 0;
+            .sidebar-brand span,
+            .sidebar .nav-link span {
+                display: none;
             }
 
-            .loglens-nav {
-                padding: 12px;
+            .sidebar .nav-link {
+                text-align: center;
             }
 
-            .loglens-content {
-                padding: 20px;
+            .sidebar .nav-link i {
+                margin-right: 0;
             }
 
-            .loglens-topbar {
-                padding: 0 20px;
+            .main-wrapper {
+                margin-left: 70px;
             }
+
         }
+
     </style>
 
     {% block extra_css %}{% endblock %}
+
 </head>
 
 <body>
 
-    <div class="loglens-app">
+    <aside class="sidebar">
 
-        <!-- =========================================================
-         SIDEBAR
-         ========================================================= -->
+        <a
+            href="{% url 'dashboard' %}"
+            class="sidebar-brand"
+        >
+            <i class="bi bi-activity me-2"></i>
+            <span>LogLens</span>
+        </a>
 
-        <aside class="loglens-sidebar">
+        <nav class="sidebar-nav">
 
-            <!-- Brand -->
-            <div class="loglens-brand">
+            <a
+                href="{% url 'dashboard' %}"
+                class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}"
+            >
+                <i class="bi bi-grid-1x2"></i>
+                <span>Dashboard</span>
+            </a>
 
-                <span class="loglens-brand-name">
-                    LogLens
-                </span>
+            <a
+                href="{% url 'ingestion:upload' %}"
+                class="nav-link {% if request.resolver_match.app_name == 'ingestion' %}active{% endif %}"
+            >
+                <i class="bi bi-file-earmark-arrow-up"></i>
+                <span>Files</span>
+            </a>
 
-                <span class="loglens-brand-subtitle">
-                    Analytics
-                </span>
+            <a
+                href="{% url 'search:run' %}"
+                class="nav-link {% if request.resolver_match.url_name == 'run' and request.resolver_match.app_name == 'search' %}active{% endif %}"
+            >
+                <i class="bi bi-search"></i>
+                <span>Search</span>
+            </a>
 
+            <a
+                href="{% url 'search:error-groups' %}"
+                class="nav-link {% if request.resolver_match.url_name == 'error-groups' %}active{% endif %}"
+            >
+                <i class="bi bi-exclamation-triangle"></i>
+                <span>Error Groups</span>
+            </a>
+
+            <a
+                href="{% url 'benchmarks:run' %}"
+                class="nav-link {% if request.resolver_match.app_name == 'benchmarks' %}active{% endif %}"
+            >
+                <i class="bi bi-speedometer2"></i>
+                <span>Benchmarks</span>
+            </a>
+
+            <a
+                href="{% url 'search:indicators' %}"
+                class="nav-link {% if request.resolver_match.url_name == 'indicators' %}active{% endif %}"
+            >
+                <i class="bi bi-shield-check"></i>
+                <span>Indicators</span>
+            </a>
+
+            <a
+                href="#"
+                class="nav-link"
+            >
+                <i class="bi bi-file-earmark-bar-graph"></i>
+                <span>Reports</span>
+            </a>
+
+        </nav>
+
+    </aside>
+
+    <div class="main-wrapper">
+
+        <header class="topbar">
+
+            <div>
+                <strong>
+                    {% block topbar_title %}LogLens{% endblock %}
+                </strong>
             </div>
 
+            <div class="d-flex align-items-center gap-3">
 
-            <!-- Navigation -->
-            <nav class="loglens-nav">
+                {% if request.user.is_authenticated %}
 
-                <!-- Workspace -->
-                <div class="loglens-nav-section">
-                    Workspace
-                </div>
-
-
-                <!-- Dashboard -->
-                <a href="{% url 'dashboard' %}"
-                    class="loglens-nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
-                    <i class="bi bi-grid-1x2-fill loglens-nav-icon"></i>
-
-                    <span>
-                        Dashboard
+                    <span class="text-muted small">
+                        {{ request.user.username }}
                     </span>
-                </a>
 
-
-                <!-- Files -->
-                <a href="{% url 'ingestion:upload' %}"
-                    class="loglens-nav-link {% if request.resolver_match.app_name == 'ingestion' %}active{% endif %}">
-                    <i class="bi bi-folder-fill loglens-nav-icon"></i>
-
-                    <span>
-                        Files
-                    </span>
-                </a>
-
-
-                <!-- Search -->
-                <a href="{% url 'search:run' %}"
-                    class="nav-link loglens-nav-link {% if request.resolver_match.url_name == 'run' %}active{% endif %}">
-                    <i class="bi bi-search me-2"></i>
-                    <span>Search</span>
-                </a>
-
-
-                <!-- Indicators -->
-                <a href="{% url 'search:indicators' %}"
-                    class="nav-link loglens-nav-link {% if request.resolver_match.url_name == 'indicators' %}active{% endif %}">
-                    <i class="bi bi-funnel me-2"></i>
-                    <span>Indicators</span>
-                </a>
-
-
-                <!-- Analysis -->
-                <div class="loglens-nav-section mt-4">
-                    Analysis
-                </div>
-
-
-                <!-- Benchmarks -->
-                <a href="{% url 'benchmarks:run' %}"
-                    class="loglens-nav-link {% if request.resolver_match.app_name == 'benchmarks' %}active{% endif %}">
-                    <i class="bi bi-bar-chart-line-fill loglens-nav-icon"></i>
-
-                    <span>
-                        Benchmarks
-                    </span>
-                </a>
-
-
-                <!-- Reports -->
-                <a href="#" class="loglens-nav-link">
-                    <i class="bi bi-file-earmark-bar-graph-fill loglens-nav-icon"></i>
-
-                    <span>
-                        Reports
-                    </span>
-                </a>
-
-            </nav>
-
-
-            <!-- Sidebar Footer -->
-            <div class="loglens-sidebar-footer">
-
-                LogLens
-                <br>
-
-                Algorithmic Log Analysis
-
-            </div>
-
-        </aside>
-
-
-        <!-- =========================================================
-         MAIN
-         ========================================================= -->
-
-        <main class="loglens-main">
-
-
-            <!-- =====================================================
-             TOP BAR
-             ===================================================== -->
-
-            <header class="loglens-topbar">
-
-                <div>
-
-                    <h1 class="loglens-page-title">
-
-                        {% block page_title %}
-                        LogLens
-                        {% endblock %}
-
-                    </h1>
-
-                    <div class="text-muted small mt-1">
-                        Log analysis and algorithmic search workspace
-                    </div>
-
-                </div>
-
-
-                <div class="d-flex align-items-center gap-3">
-
-                    <!-- Workspace -->
-                    <div class="d-none d-md-flex align-items-center gap-2">
-
-                        <i class="bi bi-layers text-muted"></i>
-
-                        <div>
-
-                            <div class="small fw-semibold">
-                                Active Workspace
-                            </div>
-
-                            <div class="text-muted small">
-                                LogLens Demo Workspace
-                            </div>
-
-                        </div>
-
-                    </div>
-
-
-                    <!-- Divider -->
-                    <div class="vr d-none d-md-block" style="height: 32px;"></div>
-
-
-                    <!-- User -->
-                    <div class="d-flex align-items-center gap-2">
-
-                        <div class="rounded-circle bg-dark text-white
-                               d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
-                            <i class="bi bi-person-fill"></i>
-                        </div>
-
-                        <div class="d-none d-sm-block">
-
-                            <div class="small fw-semibold">
-
-                                {% if user.is_authenticated %}
-                                {{ user.username }}
-                                {% else %}
-                                Guest
-                                {% endif %}
-
-                            </div>
-
-                            <div class="text-muted small">
-                                Analyst
-                            </div>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-            </header>
-
-
-            <!-- =====================================================
-             PAGE CONTENT
-             ===================================================== -->
-
-            <section class="loglens-content">
-
-
-                <!-- Django Messages -->
-                {% block messages %}
-
-                {% if messages %}
-
-                {% for message in messages %}
-
-                <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
-
-                    {{ message }}
-
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-
-                </div>
-
-                {% endfor %}
+                    <a
+                        href="{% url 'admin:logout' %}"
+                        class="btn btn-sm btn-outline-secondary"
+                    >
+                        Logout
+                    </a>
 
                 {% endif %}
 
-                {% endblock %}
+            </div>
 
+        </header>
 
-                <!-- Page Content -->
-                {% block content %}
+        <main class="content">
 
-                {% endblock %}
+            <div class="page-header">
 
+                <h1>
+                    {% block page_title %}LogLens{% endblock %}
+                </h1>
 
-            </section>
+                <p>
+                    {% block page_subtitle %}{% endblock %}
+                </p>
+
+            </div>
+
+            {% if messages %}
+
+                {% for message in messages %}
+
+                    <div
+                        class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show"
+                        role="alert"
+                    >
+
+                        {{ message }}
+
+                        <button
+                            type="button"
+                            class="btn-close"
+                            data-bs-dismiss="alert"
+                            aria-label="Close"
+                        ></button>
+
+                    </div>
+
+                {% endfor %}
+
+            {% endif %}
+
+            {% block content %}
+            {% endblock %}
 
         </main>
 
     </div>
 
+    <script
+        src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+    ></script>
 
-    <!-- Bootstrap JavaScript -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-
-
-    {% block extra_js %}
-
-    {% endblock %}
+    {% block extra_js %}{% endblock %}
 
 </body>
-
 </html>

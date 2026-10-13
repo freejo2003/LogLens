@@ -15,12 +15,7 @@ ALGORITHM_VERSIONS = {
 
 
 def calculate_input_checksum(text: str) -> str:
-    """
-    Calculate SHA-256 for the exact in-memory benchmark corpus.
-    """
-    return hashlib.sha256(
-        text.encode("utf-8")
-    ).hexdigest()
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
 def create_benchmark_run(
@@ -31,17 +26,9 @@ def create_benchmark_run(
     pattern: str,
     source_file=None,
 ) -> BenchmarkRun:
-    """
-    Execute a complete benchmark and persist its results.
-
-    The algorithm benchmark operates entirely on the supplied
-    in-memory text. Database persistence happens outside the
-    timed algorithm execution.
-    """
     if workspace.owner_id != owner.id:
         raise PermissionError(
-            "The selected workspace does not belong "
-            "to the current user."
+            "The selected workspace does not belong to the current user."
         )
 
     input_checksum = calculate_input_checksum(text)
@@ -51,8 +38,7 @@ def create_benchmark_run(
     if source_file is not None:
         if source_file.owner_id != owner.id:
             raise PermissionError(
-                "The source file does not belong "
-                "to the current user."
+                "The source file does not belong to the current user."
             )
 
         source_checksum = source_file.checksum
@@ -69,20 +55,11 @@ def create_benchmark_run(
     )
 
     try:
-        result = benchmark_all(
-            text,
-            pattern,
-        )
+        result = benchmark_all(text, pattern)
 
         with transaction.atomic():
-            benchmark.positions_consistent = (
-                result.positions_consistent
-            )
-
-            benchmark.status = (
-                BenchmarkRun.Status.SUCCEEDED
-            )
-
+            benchmark.positions_consistent = result.positions_consistent
+            benchmark.status = BenchmarkRun.Status.SUCCEEDED
             benchmark.completed_at = timezone.now()
 
             benchmark.save(
@@ -102,6 +79,14 @@ def create_benchmark_run(
                             metric.algorithm
                         ],
                         elapsed_seconds=metric.elapsed_seconds,
+                        warmup_runs=metric.warmup_runs,
+                        trial_count=metric.trial_count,
+                        median_seconds=metric.median_seconds,
+                        minimum_seconds=metric.minimum_seconds,
+                        maximum_seconds=metric.maximum_seconds,
+                        trial_times_seconds=list(
+                            metric.trial_times_seconds
+                        ),
                         match_count=metric.match_count,
                         positions=list(metric.positions),
                         text_length=metric.text_length,
@@ -113,10 +98,7 @@ def create_benchmark_run(
         return benchmark
 
     except Exception as exc:
-        benchmark.status = (
-            BenchmarkRun.Status.FAILED
-        )
-
+        benchmark.status = BenchmarkRun.Status.FAILED
         benchmark.error_message = str(exc)
         benchmark.completed_at = timezone.now()
 

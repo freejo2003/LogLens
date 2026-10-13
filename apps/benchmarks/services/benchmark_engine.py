@@ -1,15 +1,16 @@
 from dataclasses import dataclass
+from statistics import median
 from time import perf_counter
 
 from apps.search.services.matching import ALGORITHMS, run_search
 
 
+DEFAULT_WARMUP_RUNS = 3
+DEFAULT_TRIALS = 10
+
+
 @dataclass(frozen=True)
 class AlgorithmBenchmarkResult:
-    """
-    Performance and correctness information for one algorithm run.
-    """
-
     algorithm: str
     pattern: str
     text_length: int
@@ -17,21 +18,39 @@ class AlgorithmBenchmarkResult:
     positions: tuple[int, ...]
     elapsed_seconds: float
 
+    # Detailed repeated-trial statistics.
+    warmup_runs: int
+    trial_count: int
+    trial_times_seconds: tuple[float, ...]
+    median_seconds: float
+    minimum_seconds: float
+    maximum_seconds: float
+
     @property
     def elapsed_milliseconds(self) -> float:
         return self.elapsed_seconds * 1000
 
+    @property
+    def median_milliseconds(self) -> float:
+        return self.median_seconds * 1000
+
+    @property
+    def minimum_milliseconds(self) -> float:
+        return self.minimum_seconds * 1000
+
+    @property
+    def maximum_milliseconds(self) -> float:
+        return self.maximum_seconds * 1000
+
 
 @dataclass(frozen=True)
 class BenchmarkResult:
-    """
-    Complete benchmark for the registered search algorithms.
-    """
-
     pattern: str
     text_length: int
     results: tuple[AlgorithmBenchmarkResult, ...]
     positions_consistent: bool
+    warmup_runs: int
+    trial_count: int
 
     @property
     def algorithms(self) -> tuple[str, ...]:
@@ -42,53 +61,106 @@ def benchmark_algorithm(
     algorithm: str,
     text: str,
     pattern: str,
+    *,
+    warmup_runs: int = DEFAULT_WARMUP_RUNS,
+    trials: int = DEFAULT_TRIALS,
 ) -> AlgorithmBenchmarkResult:
     """
-    Benchmark one search algorithm against an in-memory text.
+    Benchmark one search algorithm using warm-up runs followed by
+    repeated measured trials.
 
-    Only the algorithm execution is timed. Result construction happens
-    after the timer stops so measurement is focused on the search
-    operation itself.
+    Warm-up runs are excluded from the reported timing.
+
+    The representative elapsed_seconds value is the median measured
+    trial time. Detailed trial timings and spread are retained so the
+    benchmark can later be persisted and reported rigorously.
     """
-    start = perf_counter()
+    if not pattern:
+        raise ValueError("Benchmark pattern cannot be empty.")
 
-    match_result = run_search(
-        algorithm,
-        text,
-        pattern,
-    )
+    if warmup_runs < 0:
+        raise ValueError("warmup_runs cannot be negative.")
 
-    elapsed_seconds = perf_counter() - start
+    if trials <= 0:
+        raise ValueError("trials must be greater than zero.")
+
+    # Warm-up phase.
+    for _ in range(warmup_runs):
+        run_search(algorithm, text, pattern)
+
+    # Measured phase.
+    trial_times = []
+
+    reference_result = None
+
+    for _ in range(trials):
+        start = perf_counter()
+        match_result = run_search(algorithm, text, pattern)
+        elapsed_seconds = perf_counter() - start
+
+        trial_times.append(elapsed_seconds)
+
+        if reference_result is None:
+            reference_result = match_result
+        else:
+            if match_result.positions != reference_result.positions:
+                raise RuntimeError(
+                    f"Algorithm '{algorithm}' produced inconsistent "
+                    "match positions across benchmark trials."
+                )
+
+    assert reference_result is not None
+
+    median_seconds = median(trial_times)
+    minimum_seconds = min(trial_times)
+    maximum_seconds = max(trial_times)
 
     return AlgorithmBenchmarkResult(
-        algorithm=match_result.algorithm,
-        pattern=match_result.pattern,
+        algorithm=reference_result.algorithm,
+        pattern=reference_result.pattern,
         text_length=len(text),
-        match_count=match_result.match_count,
-        positions=match_result.positions,
-        elapsed_seconds=elapsed_seconds,
+        match_count=reference_result.match_count,
+        positions=reference_result.positions,
+        elapsed_seconds=median_seconds,
+        warmup_runs=warmup_runs,
+        trial_count=trials,
+        trial_times_seconds=tuple(trial_times),
+        median_seconds=median_seconds,
+        minimum_seconds=minimum_seconds,
+        maximum_seconds=maximum_seconds,
     )
 
 
 def benchmark_all(
     text: str,
     pattern: str,
+    *,
+    warmup_runs: int = DEFAULT_WARMUP_RUNS,
+    trials: int = DEFAULT_TRIALS,
 ) -> BenchmarkResult:
     """
-    Run every registered search algorithm against the same
-    in-memory text and pattern.
+    Benchmark all configured algorithms using identical benchmark
+    configuration.
 
-    The algorithms are executed independently but receive identical
-    input so their results can be compared fairly.
+    Correctness is checked through the match-position agreement across
+    algorithms.
     """
     if not pattern:
         raise ValueError("Benchmark pattern cannot be empty.")
+
+    if warmup_runs < 0:
+        raise ValueError("warmup_runs cannot be negative.")
+
+    if trials <= 0:
+        raise ValueError("trials must be greater than zero.")
 
     results = tuple(
         benchmark_algorithm(
             algorithm,
             text,
             pattern,
+            warmup_runs=warmup_runs,
+            trials=trials,
         )
         for algorithm in ALGORITHMS
     )
@@ -105,4 +177,6 @@ def benchmark_all(
         text_length=len(text),
         results=results,
         positions_consistent=positions_consistent,
+        warmup_runs=warmup_runs,
+        trial_count=trials,
     )

@@ -1,11 +1,8 @@
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect, render
 
-from apps.search.forms import (
-    IndicatorRuleForm,
-    SavedSearchForm,
-    SearchRunForm,
-)
+from apps.search.forms import IndicatorRuleForm, SavedSearchForm, SearchRunForm
+from apps.search.models import ErrorGroup
 from apps.search.services.indicators import (
     create_indicator_rule,
     get_indicator_rules_for_user,
@@ -45,15 +42,23 @@ def search_workspace(request):
 
                 match_results = list(
                     search_run.match_results
-                    .select_related("segment", "source_file")
+                    .select_related(
+                        "segment",
+                        "source_file",
+                    )
                     .order_by("segment__sequence")
                 )
 
             except (PermissionError, ValueError) as exc:
-                form.add_error(None, str(exc))
+                form.add_error(
+                    None,
+                    str(exc),
+                )
 
     else:
-        form = SearchRunForm(user=request.user)
+        form = SearchRunForm(
+            user=request.user,
+        )
 
     return render(
         request,
@@ -62,22 +67,58 @@ def search_workspace(request):
             "form": form,
             "search_run": search_run,
             "match_results": match_results,
-            "saved_searches": get_saved_searches_for_user(request.user),
-            "indicator_rules": get_indicator_rules_for_user(request.user),
+            "saved_searches": get_saved_searches_for_user(
+                request.user
+            ),
+            "indicator_rules": get_indicator_rules_for_user(
+                request.user
+            ),
         },
     )
 
 
 @login_required
 def indicators_workspace(request):
-    form = IndicatorRuleForm(user=request.user)
+    form = IndicatorRuleForm(
+        user=request.user,
+    )
 
     return render(
         request,
         "search/indicators.html",
         {
             "form": form,
-            "indicator_rules": get_indicator_rules_for_user(request.user),
+            "indicator_rules": get_indicator_rules_for_user(
+                request.user
+            ),
+        },
+    )
+
+
+@login_required
+def error_groups_workspace(request):
+    error_groups = (
+        ErrorGroup.objects
+        .filter(
+            owner=request.user,
+            workspace__owner=request.user,
+        )
+        .prefetch_related(
+            "members__source_file",
+            "members__segment",
+        )
+        .select_related("workspace")
+        .order_by(
+            "-occurrence_count",
+            "name",
+        )
+    )
+
+    return render(
+        request,
+        "search/error_groups.html",
+        {
+            "error_groups": error_groups,
         },
     )
 
