@@ -167,3 +167,76 @@ class MatchResult(models.Model):
             f"{self.source_file.original_name} — "
             f"segment {self.segment.sequence}"
         )
+
+
+class ErrorGroup(models.Model):
+    workspace = models.ForeignKey(
+        Workspace,
+        on_delete=models.CASCADE,
+        related_name="error_groups",
+    )
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="error_groups",
+    )
+    name = models.CharField(max_length=255)
+    normalized_message = models.TextField()
+    occurrence_count = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-occurrence_count", "name"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["workspace", "normalized_message"],
+                name="unique_error_group_workspace_message",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["owner", "-occurrence_count"]),
+            models.Index(fields=["workspace", "-occurrence_count"]),
+        ]
+
+    def __str__(self):
+        return self.name
+
+
+class GroupMember(models.Model):
+    error_group = models.ForeignKey(
+        ErrorGroup,
+        on_delete=models.CASCADE,
+        related_name="members",
+    )
+    source_file = models.ForeignKey(
+        "ingestion.SourceFile",
+        on_delete=models.CASCADE,
+        related_name="error_group_members",
+    )
+    segment = models.ForeignKey(
+        "ingestion.TextSegment",
+        on_delete=models.CASCADE,
+        related_name="error_group_members",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["source_file", "segment__sequence"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["error_group", "segment"],
+                name="unique_error_group_segment",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["error_group", "segment"]),
+            models.Index(fields=["source_file", "segment"]),
+        ]
+
+    def __str__(self):
+        return (
+            f"{self.error_group.name} — "
+            f"{self.source_file.original_name} — "
+            f"segment {self.segment.sequence}"
+        )
