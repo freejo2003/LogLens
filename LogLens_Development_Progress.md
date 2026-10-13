@@ -1179,3 +1179,56 @@ For example:
 2026-10-12 09:03:10 ERROR Database connection failed
 2026-10-12 09:03:11 ERROR Database connection failed
 2026-10-12 09:03:12 ERROR Database connection failed
+
+## Current Development Status
+
+### Benchmarking and Algorithm Evaluation
+
+The LogLens benchmarking subsystem currently supports reproducible repeated-trial evaluation of the three required string-matching algorithms:
+
+- Naive String Matching
+- Knuth-Morris-Pratt (KMP)
+- Rabin-Karp
+
+The benchmark implementation has been extended beyond a single one-shot timing measurement.
+
+#### Current Benchmark Methodology
+
+Each algorithm is evaluated using:
+
+| Parameter | Current configuration |
+|---|---:|
+| Warm-up runs | 3 |
+| Measured trials | 10 |
+| Representative timing | Median |
+| Timing spread | Minimum / Maximum |
+| Raw trial timings | Preserved |
+| Correctness validation | Match-position agreement |
+
+Warm-up executions are excluded from the reported measurements. Ten measured trials are then executed for each algorithm, with the median used as the representative timing.
+
+The raw timing values and statistical summary are retained so that benchmark results can be inspected and reproduced rather than relying only on a single timing measurement.
+
+### Benchmark Data Persistence
+
+`AlgorithmMetric` now records the repeated-trial benchmark metadata and timing statistics:
+
+- `algorithm`
+- `algorithm_version`
+- `elapsed_seconds`
+- `warmup_runs`
+- `trial_count`
+- `median_seconds`
+- `minimum_seconds`
+- `maximum_seconds`
+- `trial_times_seconds`
+- `match_count`
+- `positions`
+- `text_length`
+
+`elapsed_seconds` is retained as the representative timing value and currently corresponds to the measured median.
+
+A Django migration was created and applied:
+
+```text
+0003_algorithmmetric_maximum_seconds_and_more
