@@ -1142,3 +1142,40 @@ The project has substantially completed the Foundation, Ingestion/Ownership, and
 4. Complete saved-search edit/delete/rerun workflows.
 5. Implement result exports.
 6. Upgrade benchmarking to the PRD's warm-up, repeated-trial, timing-separation, memory, and Rabin-Karp collision/verification requirements.
+## Current Development Status
+
+### Recurring Error Grouping
+
+LogLens now includes the initial deterministic recurring-error grouping foundation.
+
+The grouping implementation consists of:
+
+- `ErrorGroup` model for normalized recurring-error templates.
+- `GroupMember` model linking grouped events back to their source file and text segment.
+- Deterministic normalization of log messages.
+- Ownership and workspace validation.
+- Duplicate membership protection.
+- Occurrence counting.
+- Source-file grouping service.
+- Automated tests for grouping behavior.
+
+### Current Normalization Rules
+
+The current normalization process:
+
+1. Removes leading/trailing whitespace.
+2. Removes the standard timestamp prefix.
+3. Removes the log severity prefix.
+4. Removes trailing `key=value` metadata.
+5. Removes standalone duration values.
+6. Collapses repeated whitespace.
+7. Applies case-folding for deterministic case-insensitive grouping.
+
+Meaningful values such as HTTP status codes are intentionally preserved.
+
+For example:
+
+```text
+2026-10-12 09:03:10 ERROR Database connection failed
+2026-10-12 09:03:11 ERROR Database connection failed
+2026-10-12 09:03:12 ERROR Database connection failed
