@@ -57,6 +57,10 @@ class SavedSearch(models.Model):
         blank=True,
         related_name="saved_searches",
     )
+    source_checksum = models.CharField(
+        max_length=64,
+        blank=True,
+    )
     name = models.CharField(max_length=200)
     pattern = models.TextField()
     algorithm = models.CharField(max_length=50)

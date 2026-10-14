@@ -1,6 +1,8 @@
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect, render
-
+from apps.search.services.saved_search_status import (
+    get_saved_search_source_status,
+)
 from apps.search.forms import IndicatorRuleForm, SavedSearchForm, SearchRunForm
 from apps.search.models import ErrorGroup
 from apps.search.services.indicators import (
@@ -75,7 +77,24 @@ def search_workspace(request):
             ),
         },
     )
+@login_required
+def saved_searches_workspace(request):
+    saved_searches = list(
+        get_saved_searches_for_user(request.user)
+    )
 
+    for saved_search in saved_searches:
+        saved_search.source_status = get_saved_search_source_status(
+            saved_search
+        )
+
+    return render(
+        request,
+        "search/saved_searches.html",
+        {
+            "saved_searches": saved_searches,
+        },
+    )
 
 @login_required
 def indicators_workspace(request):
@@ -138,12 +157,13 @@ def save_search(request):
             create_saved_search(
                 owner=request.user,
                 workspace=form.cleaned_data["workspace"],
+                source_file=form.cleaned_data["source_file"],
                 name=form.cleaned_data["name"],
                 pattern=form.cleaned_data["pattern"],
                 algorithm=form.cleaned_data["algorithm"],
                 description=form.cleaned_data["description"],
             )
-        except PermissionError:
+        except (PermissionError, ValueError):
             pass
 
     return redirect("search:run")

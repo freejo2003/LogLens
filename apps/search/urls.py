@@ -18,6 +18,11 @@ urlpatterns = [
         name="save",
     ),
     path(
+        "saved/",
+        views.saved_searches_workspace,
+        name="saved",
+    ),
+    path(
         "indicators/",
         views.indicators_workspace,
         name="indicators",
@@ -32,4 +37,5 @@ urlpatterns = [
         views.error_groups_workspace,
         name="error-groups",
     ),
+    
 ]

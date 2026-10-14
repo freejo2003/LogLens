@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+
+{% block title %}Saved Searches · LogLens{% endblock %}
+
+{% block page_title %}Saved Searches{% endblock %}
+
+{% block page_subtitle %}
+Manage reusable search configurations and check whether their source files have changed.
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="h5 mb-1">Saved Searches</h2>
+        <p class="text-muted mb-0">
+            Reusable search configurations for your workspaces.
+        </p>
+    </div>
+
+    <a href="{% url 'search:run' %}" class="btn btn-primary">
+        <i class="bi bi-search me-1"></i>
+        New Search
+    </a>
+</div>
+
+{% if saved_searches %}
+<div class="card loglens-card">
+    <div class="table-responsive">
+        <table class="table loglens-table align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Workspace</th>
+                    <th>Source File</th>
+                    <th>Pattern</th>
+                    <th>Algorithm</th>
+                    <th>Source Status</th>
+                    <th>Created</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for saved_search in saved_searches %}
+                <tr>
+                    <td>
+                        <div class="fw-semibold">
+                            {{ saved_search.name }}
+                        </div>
+
+                        {% if saved_search.description %}
+                        <div class="small text-muted mt-1">
+                            {{ saved_search.description }}
+                        </div>
+                        {% endif %}
+                    </td>
+
+                    <td>
+                        {{ saved_search.workspace.name }}
+                    </td>
+
+                    <td>
+                        {% if saved_search.source_file %}
+                            {{ saved_search.source_file.original_name }}
+                        {% else %}
+                            <span class="text-muted">
+                                No source file
+                            </span>
+                        {% endif %}
+                    </td>
+
+                    <td>
+                        <code>{{ saved_search.pattern }}</code>
+                    </td>
+
+                    <td>
+                        <span class="badge text-bg-secondary">
+                            {{ saved_search.algorithm }}
+                        </span>
+                    </td>
+
+                    <td>
+                        {% if saved_search.source_status.status == "current" %}
+                            <span class="badge text-bg-success">
+                                Current
+                            </span>
+                        {% elif saved_search.source_status.status == "changed" %}
+                            <span class="badge text-bg-warning">
+                                Changed
+                            </span>
+                        {% else %}
+                            <span class="badge text-bg-danger">
+                                Missing
+                            </span>
+                        {% endif %}
+
+                        <div class="small text-muted mt-1">
+                            {{ saved_search.source_status.message }}
+                        </div>
+                    </td>
+
+                    <td>
+                        <span class="small">
+                            {{ saved_search.created_at|date:"d M Y, H:i" }}
+                        </span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% else %}
+<div class="card loglens-card">
+    <div class="card-body text-center py-5">
+        <div class="mb-3">
+            <i class="bi bi-bookmark fs-1 text-muted"></i>
+        </div>
+
+        <h3 class="h5">No saved searches</h3>
+
+        <p class="text-muted mb-4">
+            Save a search configuration to reuse it later.
+        </p>
+
+        <a href="{% url 'search:run' %}" class="btn btn-primary">
+            Create a Search
+        </a>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

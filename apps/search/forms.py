@@ -121,6 +121,15 @@ class SavedSearchForm(forms.Form):
         ),
     )
 
+    source_file = forms.ModelChoiceField(
+        queryset=SourceFile.objects.none(),
+        label="Source file",
+        empty_label="Select an extracted source file",
+        widget=forms.Select(
+            attrs={"class": "form-select"}
+        ),
+    )
+
     name = forms.CharField(
         max_length=200,
         label="Search name",
@@ -174,6 +183,16 @@ class SavedSearchForm(forms.Form):
                 .order_by("name")
             )
 
+            self.fields["source_file"].queryset = (
+                SourceFile.objects
+                .filter(
+                    owner=user,
+                    extraction_status=SourceFile.ExtractionStatus.SUCCEEDED,
+                )
+                .select_related("workspace")
+                .order_by("-uploaded_at")
+            )
+
     def clean_name(self):
         name = self.cleaned_data["name"].strip()
 
@@ -193,6 +212,31 @@ class SavedSearchForm(forms.Form):
             )
 
         return pattern
+
+    def clean_algorithm(self):
+        algorithm = self.cleaned_data["algorithm"]
+
+        if algorithm not in ALGORITHMS:
+            raise forms.ValidationError(
+                "Invalid search algorithm."
+            )
+
+        return algorithm
+
+    def clean(self):
+        cleaned_data = super().clean()
+
+        workspace = cleaned_data.get("workspace")
+        source_file = cleaned_data.get("source_file")
+
+        if workspace is not None and source_file is not None:
+            if source_file.workspace_id != workspace.id:
+                raise forms.ValidationError(
+                    "The selected source file does not belong "
+                    "to the selected workspace."
+                )
+
+        return cleaned_data
 
 
 class IndicatorRuleForm(forms.Form):

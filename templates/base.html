@@ -591,6 +591,13 @@
                 <i class="bi bi-search"></i>
                 <span>Search</span>
             </a>
+            <a
+    href="{% url 'search:saved' %}"
+    class="nav-link {% if request.resolver_match.url_name == 'saved' %}active{% endif %}"
+>
+    <i class="bi bi-bookmark me-2"></i>
+    Saved Searches
+</a>
 
 
             <!-- Error Groups -->

@@ -630,7 +630,7 @@ Upload, inspect, and manage private source files
                                 </td>
 
 
-                                <!-- Actions -->
+                                                               <!-- Actions -->
 
                                 <td class="pe-4">
 
@@ -653,16 +653,29 @@ Upload, inspect, and manage private source files
 
                                         {% endif %}
 
+                                        <form
+                                            method="post"
+                                            action="{% url 'ingestion:delete' file.id %}"
+                                            class="d-inline"
+                                            onsubmit="return confirm('Delete {{ file.original_name|escapejs }}? This will permanently remove the uploaded file and its extracted text.');"
+                                        >
+                                            {% csrf_token %}
 
-                                        {% if file.deleted_at %}
-
-                                            <span class="badge text-bg-secondary">
-                                                Deleted
-                                            </span>
-
-                                        {% endif %}
+                                            <button
+                                                type="submit"
+                                                class="btn btn-sm btn-outline-danger"
+                                                title="Delete file"
+                                            >
+                                                <i class="bi bi-trash"></i>
+                                                <span class="d-none d-lg-inline ms-1">
+                                                    Delete
+                                                </span>
+                                            </button>
+                                        </form>
 
                                     </div>
+
+                                </td>
 
                                 </td>
 
