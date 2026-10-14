@@ -1,13 +1,24 @@
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect, render
-from apps.search.services.saved_search_status import (
-    get_saved_search_source_status,
+
+from apps.accounts.permissions import (
+    analyst_post_required,
+    analyst_required,
+    reviewer_required,
 )
-from apps.search.forms import IndicatorRuleForm, SavedSearchForm, SearchRunForm
+
+from apps.search.forms import (
+    IndicatorRuleForm,
+    SavedSearchForm,
+    SearchRunForm,
+)
 from apps.search.models import ErrorGroup
 from apps.search.services.indicators import (
     create_indicator_rule,
     get_indicator_rules_for_user,
+)
+from apps.search.services.saved_search_status import (
+    get_saved_search_source_status,
 )
 from apps.search.services.saved_searches import (
     create_saved_search,
@@ -17,11 +28,19 @@ from apps.search.services.search_persistence import create_search_run
 
 
 @login_required
+@analyst_post_required
 def search_workspace(request):
     search_run = None
     match_results = []
 
     if request.method == "POST":
+        from django.core.exceptions import PermissionDenied
+
+        from apps.accounts.services import is_reviewer
+
+        if is_reviewer(request.user):
+            raise PermissionDenied
+
         form = SearchRunForm(
             request.POST,
             user=request.user,
@@ -77,7 +96,9 @@ def search_workspace(request):
             ),
         },
     )
+
 @login_required
+@reviewer_required
 def saved_searches_workspace(request):
     saved_searches = list(
         get_saved_searches_for_user(request.user)
@@ -96,7 +117,9 @@ def saved_searches_workspace(request):
         },
     )
 
+
 @login_required
+@reviewer_required
 def indicators_workspace(request):
     form = IndicatorRuleForm(
         user=request.user,
@@ -115,6 +138,7 @@ def indicators_workspace(request):
 
 
 @login_required
+@reviewer_required
 def error_groups_workspace(request):
     error_groups = (
         ErrorGroup.objects
@@ -143,6 +167,7 @@ def error_groups_workspace(request):
 
 
 @login_required
+@analyst_required
 def save_search(request):
     if request.method != "POST":
         return redirect("search:run")
@@ -170,6 +195,7 @@ def save_search(request):
 
 
 @login_required
+@analyst_required
 def create_indicator(request):
     if request.method != "POST":
         return redirect("search:indicators")

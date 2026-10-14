@@ -1,11 +1,14 @@
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 
+from apps.accounts.permissions import analyst_post_required
+
 from apps.benchmarks.forms import BenchmarkRunForm
 from apps.benchmarks.services.source_benchmark import benchmark_source_file
 
 
 @login_required
+@analyst_post_required
 def benchmark_workspace(request):
     benchmark = None
 
@@ -27,9 +30,15 @@ def benchmark_workspace(request):
                     pattern=pattern,
                 )
             except (PermissionError, ValueError) as exc:
-                form.add_error(None, str(exc))
+                form.add_error(
+                    None,
+                    str(exc),
+                )
+
     else:
-        form = BenchmarkRunForm(user=request.user)
+        form = BenchmarkRunForm(
+            user=request.user,
+        )
 
     metrics = []
 

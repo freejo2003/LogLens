@@ -1,8 +1,9 @@
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 
+from apps.ingestion.models import SourceFile
 from apps.search.forms import IndicatorRuleForm, SavedSearchForm
-from apps.search.models import IndicatorRule, SavedSearch
+from apps.search.models import IndicatorRule
 from apps.search.services.indicators import (
     create_indicator_rule,
     get_indicator_rules_for_user,
@@ -40,10 +41,37 @@ class SavedSearchTests(TestCase):
             owner=self.other_user,
         )
 
+        self.source_file = SourceFile.objects.create(
+            workspace=self.workspace,
+            owner=self.user,
+            original_name="saved-search.log",
+            storage_key="uploads/test-saved-search.log",
+            storage_path="",
+            extension=".log",
+            detected_type="text/plain",
+            byte_size=100,
+            checksum="a" * 64,
+            extraction_status=SourceFile.ExtractionStatus.SUCCEEDED,
+        )
+
+        self.other_source_file = SourceFile.objects.create(
+            workspace=self.other_workspace,
+            owner=self.other_user,
+            original_name="other-search.log",
+            storage_key="uploads/test-other-search.log",
+            storage_path="",
+            extension=".log",
+            detected_type="text/plain",
+            byte_size=100,
+            checksum="b" * 64,
+            extraction_status=SourceFile.ExtractionStatus.SUCCEEDED,
+        )
+
     def test_saved_search_can_be_created(self):
         saved = create_saved_search(
             owner=self.user,
             workspace=self.workspace,
+            source_file=self.source_file,
             name="Database Errors",
             pattern="ERROR",
             algorithm="kmp",
@@ -52,13 +80,19 @@ class SavedSearchTests(TestCase):
 
         self.assertEqual(saved.owner_id, self.user.id)
         self.assertEqual(saved.workspace_id, self.workspace.id)
+        self.assertEqual(saved.source_file_id, self.source_file.id)
         self.assertEqual(saved.pattern, "ERROR")
         self.assertEqual(saved.algorithm, "kmp")
+        self.assertEqual(
+            saved.source_checksum,
+            self.source_file.checksum,
+        )
 
     def test_saved_searches_are_scoped_to_user(self):
         create_saved_search(
             owner=self.user,
             workspace=self.workspace,
+            source_file=self.source_file,
             name="My Search",
             pattern="ERROR",
             algorithm="naive",
@@ -67,6 +101,7 @@ class SavedSearchTests(TestCase):
         create_saved_search(
             owner=self.other_user,
             workspace=self.other_workspace,
+            source_file=self.other_source_file,
             name="Other Search",
             pattern="WARNING",
             algorithm="kmp",
@@ -84,6 +119,7 @@ class SavedSearchTests(TestCase):
             create_saved_search(
                 owner=self.user,
                 workspace=self.other_workspace,
+                source_file=self.other_source_file,
                 name="Invalid Search",
                 pattern="ERROR",
                 algorithm="naive",

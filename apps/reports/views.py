@@ -1,11 +1,14 @@
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, render
 
+from apps.accounts.permissions import reviewer_required
+
 from apps.benchmarks.models import BenchmarkRun
 from apps.reports.services import build_benchmark_analysis
 
 
 @login_required
+@reviewer_required
 def benchmark_analysis(request, benchmark_id):
     benchmark = get_object_or_404(
         BenchmarkRun.objects.prefetch_related(

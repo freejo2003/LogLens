@@ -3,10 +3,10 @@ from pathlib import Path
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
-
+from apps.accounts.services import ANALYST_ROLE, assign_role
 from apps.ingestion.models import SourceFile
 from apps.workspaces.models import Workspace
-
+from apps.accounts.services import ANALYST_ROLE, assign_role
 
 User = get_user_model()
 
@@ -17,11 +17,13 @@ class SourceFileDeletionViewTests(TestCase):
             username="view-delete-user",
             password="test-password",
         )
+        assign_role(self.user, ANALYST_ROLE)
 
         self.other_user = User.objects.create_user(
             username="view-other-user",
             password="test-password",
         )
+        assign_role(self.other_user, ANALYST_ROLE)
 
         self.workspace = Workspace.objects.create(
             name="View Deletion Workspace",

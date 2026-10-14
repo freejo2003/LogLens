@@ -2,6 +2,7 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
+from apps.accounts.services import ANALYST_ROLE, assign_role
 from apps.benchmarks.models import AlgorithmMetric, BenchmarkRun
 from apps.ingestion.models import SourceFile, TextSegment
 from apps.workspaces.models import Workspace
@@ -16,6 +17,7 @@ class BenchmarkWorkflowTests(TestCase):
             username="benchmark-user",
             password="test-password",
         )
+        assign_role(self.user, ANALYST_ROLE)
 
         self.other_user = User.objects.create_user(
             username="other-user",
@@ -261,3 +263,6 @@ class BenchmarkWorkflowTests(TestCase):
             ).count(),
             0,
         )
+
+
+

@@ -3,6 +3,8 @@ from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect, render
 
+from apps.accounts.permissions import analyst_required
+
 from apps.ingestion.forms import SourceFileUploadForm
 from apps.ingestion.models import SourceFile
 from apps.ingestion.services.deletion import delete_source_file
@@ -16,9 +18,14 @@ from apps.ingestion.services.storage import (
 
 
 @login_required
+@analyst_required
 def upload_source_file(request):
     if request.method == "POST":
-        form = SourceFileUploadForm(request.POST, request.FILES, user=request.user)
+        form = SourceFileUploadForm(
+            request.POST,
+            request.FILES,
+            user=request.user,
+        )
 
         if form.is_valid():
             uploaded_file = form.cleaned_data["file"]
@@ -29,7 +36,6 @@ def upload_source_file(request):
 
             checksum = calculate_sha256(uploaded_file)
             storage_key = generate_storage_key(extension)
-
             storage_path = save_private_file(
                 uploaded_file,
                 storage_key,
@@ -44,11 +50,15 @@ def upload_source_file(request):
                         storage_key=storage_key,
                         storage_path=storage_path,
                         extension=extension,
-                        detected_type=uploaded_file.content_type
-                        or "application/octet-stream",
+                        detected_type=(
+                            uploaded_file.content_type
+                            or "application/octet-stream"
+                        ),
                         byte_size=uploaded_file.size,
                         checksum=checksum,
-                        extraction_status=SourceFile.ExtractionStatus.PENDING,
+                        extraction_status=(
+                            SourceFile.ExtractionStatus.PENDING
+                        ),
                     )
             except Exception:
                 delete_private_file(storage_path)
@@ -56,9 +66,11 @@ def upload_source_file(request):
 
             messages.success(
                 request,
-                f"'{source_file.original_name}' was uploaded successfully. "
-                f"File ID: {source_file.id}. "
-                f"Status: Pending extraction.",
+                (
+                    f"'{source_file.original_name}' was uploaded "
+                    f"successfully. File ID: {source_file.id}. "
+                    "Status: Pending extraction."
+                ),
             )
 
             return redirect("ingestion:upload")
@@ -84,6 +96,7 @@ def upload_source_file(request):
 
 
 @login_required
+@analyst_required
 def extract_source_file(request, source_file_id):
     if request.method != "POST":
         return redirect("ingestion:upload")
@@ -94,7 +107,10 @@ def extract_source_file(request, source_file_id):
         owner=request.user,
     )
 
-    if source_file.extraction_status == SourceFile.ExtractionStatus.SUCCEEDED:
+    if (
+        source_file.extraction_status
+        == SourceFile.ExtractionStatus.SUCCEEDED
+    ):
         messages.info(
             request,
             f"'{source_file.original_name}' has already been extracted.",
@@ -106,9 +122,12 @@ def extract_source_file(request, source_file_id):
 
         messages.success(
             request,
-            f"'{source_file.original_name}' was extracted successfully. "
-            f"{segment_count} text segment(s) created.",
+            (
+                f"'{source_file.original_name}' was extracted "
+                f"successfully. {segment_count} text segment(s) created."
+            ),
         )
+
     except Exception as exc:
         messages.error(
             request,
@@ -119,6 +138,7 @@ def extract_source_file(request, source_file_id):
 
 
 @login_required
+@analyst_required
 def delete_source_file_view(request, source_file_id):
     if request.method != "POST":
         return redirect("ingestion:upload")
@@ -136,12 +156,14 @@ def delete_source_file_view(request, source_file_id):
             source_file=source_file,
             owner=request.user,
         )
+
     except PermissionError:
         messages.error(
             request,
             "You do not have permission to delete this file.",
         )
         return redirect("ingestion:upload")
+
     except ValueError:
         messages.error(
             request,
