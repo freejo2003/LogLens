@@ -1,3 +1,1 @@
-from django.contrib import admin
-
-# Register your models here.
+"""Benchmark models are managed through owner-scoped application views."""

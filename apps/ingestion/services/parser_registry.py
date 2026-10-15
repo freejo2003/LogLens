@@ -2,12 +2,14 @@ from collections.abc import Callable
 
 from apps.ingestion.models import SourceFile
 from apps.ingestion.services.docx_extractor import extract_docx_file
-from apps.ingestion.services.extractors import extract_text_file
+from apps.ingestion.services.doc_extractor import DOC_PARSER_VERSION, extract_doc_file
+from apps.ingestion.services.extractors import TEXT_PARSER_VERSION, extract_text_file
 from apps.ingestion.services.parser_adapters import (
     ParserAdapter,
     get_parser_adapter,
 )
-from apps.ingestion.services.pdf_extractor import extract_pdf_file
+from apps.ingestion.services.pdf_extractor import PDF_PARSER_VERSION, extract_pdf_file
+from apps.ingestion.services.docx_extractor import DOCX_PARSER_VERSION
 
 
 def build_parser_registry() -> list[ParserAdapter]:
@@ -17,21 +19,27 @@ def build_parser_registry() -> list[ParserAdapter]:
     return [
         ParserAdapter(
             name="plain_text",
-            version="1.0",
+            version=TEXT_PARSER_VERSION,
             extensions=frozenset({".txt", ".log"}),
             parser=extract_text_file,
         ),
         ParserAdapter(
             name="pypdf",
-            version="1.0",
+            version=PDF_PARSER_VERSION,
             extensions=frozenset({".pdf"}),
             parser=extract_pdf_file,
         ),
         ParserAdapter(
             name="python-docx",
-            version="1.0",
+            version=DOCX_PARSER_VERSION,
             extensions=frozenset({".docx"}),
             parser=extract_docx_file,
+        ),
+        ParserAdapter(
+            name="libreoffice",
+            version=DOC_PARSER_VERSION,
+            extensions=frozenset({".doc"}),
+            parser=extract_doc_file,
         ),
     ]
 

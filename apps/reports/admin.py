@@ -1,3 +1,1 @@
-from django.contrib import admin
-
-# Register your models here.
+"""Reports are read-only projections of owner-scoped benchmark records."""

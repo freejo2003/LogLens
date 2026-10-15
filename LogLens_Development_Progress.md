@@ -3,7 +3,9 @@
 **Project:** LogLens  
 **Course:** Advanced Algorithms Theory — CIA III, Component 1  
 **Date started:** 08 October 2026  
-**Current status:** Foundation setup completed; development paused.
+**Current status:** Pre-deployment audit completed in the repository; the audit report is authoritative. No deployment was performed.
+
+> Historical development notes below reflect the project as it stood on their original dates. Use `README.md`, `docs/DEPLOYMENT.md`, and `docs/PRE_DEPLOYMENT_AUDIT.md` for the current architecture and operating instructions.
 
 ---
 

@@ -38,11 +38,11 @@ Upload, inspect, and manage private source files
                     <div>
 
                         <h2 class="h5 mb-1">
-                            Upload Source File
+                            Upload Source Files
                         </h2>
 
                         <p class="loglens-muted small mb-0">
-                            Add a log or supported document to your workspace.
+                            Add up to 10 logs or supported documents to your workspace.
                         </p>
 
                     </div>
@@ -63,6 +63,17 @@ Upload, inspect, and manage private source files
                         {{ form.non_field_errors }}
                     </div>
 
+                {% endif %}
+
+                {% if form.upload_errors %}
+                    <div class="alert alert-warning" role="status">
+                        <strong>Some files were not accepted:</strong>
+                        <ul class="mb-0 mt-2">
+                            {% for name, error in form.upload_errors %}
+                                <li><strong>{{ name }}</strong>: {{ error }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
                 {% endif %}
 
 
@@ -107,10 +118,10 @@ Upload, inspect, and manage private source files
                     <div class="mb-4">
 
                         <label
-                            for="{{ form.file.id_for_label }}"
+                            for="{{ form.files.id_for_label }}"
                             class="form-label"
                         >
-                            Log or document
+                            Logs or documents
                         </label>
 
 
@@ -130,10 +141,10 @@ Upload, inspect, and manage private source files
 
                                 <div class="flex-grow-1">
 
-                                    {{ form.file }}
+                                    {{ form.files }}
 
                                     <div class="form-text mt-2">
-                                        Select a file from your computer.
+                                        Select up to 10 files. Each file may be up to 25 MB.
                                     </div>
 
                                 </div>
@@ -143,11 +154,11 @@ Upload, inspect, and manage private source files
                         </div>
 
 
-                        {% if form.file.errors %}
+                        {% if form.files.errors %}
 
                             <div class="text-danger small mt-2">
 
-                                {% for error in form.file.errors %}
+                                {% for error in form.files.errors %}
                                     <div>{{ error }}</div>
                                 {% endfor %}
 
@@ -180,7 +191,7 @@ Upload, inspect, and manage private source files
 
                             <i class="bi bi-upload me-2"></i>
 
-                            Upload File
+                            Upload Files
 
                         </button>
 
@@ -614,6 +625,10 @@ Upload, inspect, and manage private source files
 
                                     {% endif %}
 
+                                    {% if file.extraction_error %}
+                                        <div class="text-danger small mt-1">{{ file.extraction_error }}</div>
+                                    {% endif %}
+
                                 </td>
 
 
@@ -653,6 +668,16 @@ Upload, inspect, and manage private source files
 
                                         {% endif %}
 
+                                        {% if file.extraction_status == "failed" %}
+                                            <form method="post" action="{% url 'ingestion:extract' file.id %}" class="d-inline">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-sm btn-outline-warning" title="Retry extraction">
+                                                    <i class="bi bi-arrow-clockwise"></i>
+                                                    <span class="d-none d-lg-inline ms-1">Retry</span>
+                                                </button>
+                                            </form>
+                                        {% endif %}
+
                                         <form
                                             method="post"
                                             action="{% url 'ingestion:delete' file.id %}"
@@ -674,8 +699,6 @@ Upload, inspect, and manage private source files
                                         </form>
 
                                     </div>
-
-                                </td>
 
                                 </td>
 

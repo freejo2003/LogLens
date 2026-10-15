@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from statistics import median
+import tracemalloc
 from time import perf_counter
 
 from apps.search.services.matching import (
@@ -10,10 +11,13 @@ from apps.search.services.matching import (
     prepare_search,
     search_prepared,
 )
+from apps.search.services.normalization import normalize_search_text
 
 
 DEFAULT_WARMUP_RUNS = 3
 DEFAULT_TRIALS = 10
+DEFAULT_MAX_NAIVE_COMPARISONS = 5_000_000
+DEFAULT_MAX_SEARCH_MATCHES = 100_000
 
 
 @dataclass(frozen=True)
@@ -64,6 +68,7 @@ class AlgorithmBenchmarkResult:
     # do not use hash-candidate verification.
     collision_count: int
     verification_count: int
+    peak_memory_bytes: int | None
 
     @property
     def elapsed_milliseconds(self) -> float:
@@ -184,6 +189,8 @@ def _measure_preprocessing(
 def _measure_search(
     prepared: PreparedSearch,
     text: str,
+    *,
+    max_matches: int | None = None,
 ) -> tuple[MatchResult, float, int, int]:
     """
     Execute the search phase using already-prepared algorithm state.
@@ -201,6 +208,7 @@ def _measure_search(
             text,
             prepared.pattern,
             prepared.state,
+            max_matches=max_matches,
         )
 
         result = MatchResult(
@@ -216,6 +224,7 @@ def _measure_search(
         result = search_prepared(
             prepared,
             text,
+            max_matches=max_matches,
         )
 
         collision_count = 0
@@ -231,6 +240,27 @@ def _measure_search(
     )
 
 
+def _measure_peak_memory(
+    algorithm: str,
+    text: str,
+    pattern: str,
+    *,
+    max_matches: int | None,
+) -> int | None:
+    """Measure Python-heap peak for one un-timed prepared search pass."""
+    if tracemalloc.is_tracing():
+        return None
+    tracemalloc.start()
+    try:
+        tracemalloc.reset_peak()
+        prepared = prepare_search(algorithm, pattern)
+        _measure_search(prepared, text, max_matches=max_matches)
+        _current, peak = tracemalloc.get_traced_memory()
+        return peak
+    finally:
+        tracemalloc.stop()
+
+
 def benchmark_algorithm(
     algorithm: str,
     text: str,
@@ -238,6 +268,10 @@ def benchmark_algorithm(
     *,
     warmup_runs: int = DEFAULT_WARMUP_RUNS,
     trials: int = DEFAULT_TRIALS,
+    max_naive_comparisons: int | None = DEFAULT_MAX_NAIVE_COMPARISONS,
+    max_matches: int | None = DEFAULT_MAX_SEARCH_MATCHES,
+    case_sensitive: bool = True,
+    unicode_normalization: str = "none",
 ) -> AlgorithmBenchmarkResult:
     """
     Benchmark one search algorithm using phase-aware repeated trials.
@@ -257,6 +291,27 @@ def benchmark_algorithm(
         trials,
     )
 
+    original_text_length = len(text)
+    searchable_text = normalize_search_text(
+        text,
+        case_sensitive=case_sensitive,
+        unicode_normalization=unicode_normalization,
+    )
+    searchable_pattern = normalize_search_text(
+        pattern,
+        case_sensitive=case_sensitive,
+        unicode_normalization=unicode_normalization,
+    )
+    estimated_naive_comparisons = len(searchable_text) * len(searchable_pattern)
+    if (
+        algorithm == "naive"
+        and max_naive_comparisons is not None
+        and estimated_naive_comparisons > max_naive_comparisons
+    ):
+        raise ValueError(
+            "This benchmark exceeds the configured Naive work limit. Narrow the source text or shorten the pattern."
+        )
+
     # Warm-up phase.
     #
     # Warm-ups execute the same complete workflow that is measured:
@@ -264,12 +319,13 @@ def benchmark_algorithm(
     for _ in range(warmup_runs):
         prepared = prepare_search(
             algorithm,
-            pattern,
+            searchable_pattern,
         )
 
         _measure_search(
             prepared,
-            text,
+            searchable_text,
+            max_matches=max_matches,
         )
 
     preprocessing_trial_times: list[float] = []
@@ -289,7 +345,7 @@ def benchmark_algorithm(
             preprocessing_seconds,
         ) = _measure_preprocessing(
             algorithm,
-            pattern,
+            searchable_pattern,
         )
 
         (
@@ -299,7 +355,8 @@ def benchmark_algorithm(
             verification_count,
         ) = _measure_search(
             prepared,
-            text,
+            searchable_text,
+            max_matches=max_matches,
         )
 
         total_seconds = perf_counter() - total_start
@@ -376,6 +433,12 @@ def benchmark_algorithm(
     # measured trial is used as the representative value.
     representative_collision_count = collision_counts[0]
     representative_verification_count = verification_counts[0]
+    peak_memory_bytes = _measure_peak_memory(
+        algorithm,
+        searchable_text,
+        searchable_pattern,
+        max_matches=max_matches,
+    )
 
     if any(
         count != representative_collision_count
@@ -395,8 +458,8 @@ def benchmark_algorithm(
 
     return AlgorithmBenchmarkResult(
         algorithm=reference_result.algorithm,
-        pattern=reference_result.pattern,
-        text_length=len(text),
+        pattern=pattern,
+        text_length=original_text_length,
         match_count=reference_result.match_count,
         positions=reference_result.positions,
 
@@ -438,6 +501,7 @@ def benchmark_algorithm(
 
         collision_count=representative_collision_count,
         verification_count=representative_verification_count,
+        peak_memory_bytes=peak_memory_bytes,
     )
 
 
@@ -447,6 +511,10 @@ def benchmark_all(
     *,
     warmup_runs: int = DEFAULT_WARMUP_RUNS,
     trials: int = DEFAULT_TRIALS,
+    max_naive_comparisons: int | None = DEFAULT_MAX_NAIVE_COMPARISONS,
+    max_matches: int | None = DEFAULT_MAX_SEARCH_MATCHES,
+    case_sensitive: bool = True,
+    unicode_normalization: str = "none",
 ) -> BenchmarkResult:
     """
     Benchmark all configured algorithms using identical benchmark
@@ -468,6 +536,10 @@ def benchmark_all(
             pattern,
             warmup_runs=warmup_runs,
             trials=trials,
+            max_naive_comparisons=max_naive_comparisons,
+            max_matches=max_matches,
+            case_sensitive=case_sensitive,
+            unicode_normalization=unicode_normalization,
         )
         for algorithm in ALGORITHMS
     )

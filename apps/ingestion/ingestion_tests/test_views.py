@@ -1,14 +1,55 @@
-from pathlib import Path
-
 from django.contrib.auth import get_user_model
-from django.test import TestCase
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import Client, TestCase
 from django.urls import reverse
+from unittest.mock import patch
+
 from apps.accounts.services import ANALYST_ROLE, assign_role
 from apps.ingestion.models import SourceFile
 from apps.workspaces.models import Workspace
-from apps.accounts.services import ANALYST_ROLE, assign_role
 
 User = get_user_model()
+
+
+class MultipleUploadViewTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="multiple-upload-user",
+            password="test-password",
+        )
+        assign_role(self.user, ANALYST_ROLE)
+        self.workspace = Workspace.objects.create(name="Uploads", owner=self.user)
+        self.client.force_login(self.user)
+
+    def test_upload_post_requires_csrf_token(self):
+        client = Client(enforce_csrf_checks=True)
+        client.force_login(self.user)
+        response = client.post(reverse("ingestion:upload"), data={})
+        self.assertEqual(response.status_code, 403)
+
+    @patch("apps.ingestion.views.enqueue_extraction")
+    @patch("apps.ingestion.views.save_private_file")
+    def test_multiple_uploads_create_owned_pending_sources_and_queue_them(
+        self, save_private_file, enqueue_extraction
+    ):
+        save_private_file.side_effect = [
+            "C:/private/uploads/one.log",
+            "C:/private/uploads/two.txt",
+        ]
+        files = [
+            SimpleUploadedFile("one.log", b"ERROR one\n", content_type="text/plain"),
+            SimpleUploadedFile("two.txt", b"WARN two\n", content_type="text/plain"),
+        ]
+        response = self.client.post(
+            reverse("ingestion:upload"),
+            {"workspace": self.workspace.pk, "files": files},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        sources = list(SourceFile.objects.filter(owner=self.user).order_by("original_name"))
+        self.assertEqual([item.original_name for item in sources], ["one.log", "two.txt"])
+        self.assertTrue(all(item.extraction_status == SourceFile.ExtractionStatus.PENDING for item in sources))
+        self.assertEqual(enqueue_extraction.call_count, 2)
 
 
 class SourceFileDeletionViewTests(TestCase):
@@ -68,11 +109,7 @@ class SourceFileDeletionViewTests(TestCase):
             )
         )
 
-        self.assertEqual(response.status_code, 302)
-        self.assertEqual(
-            response.url,
-            reverse("ingestion:upload"),
-        )
+        self.assertEqual(response.status_code, 405)
 
         self.assertTrue(
             SourceFile.objects.filter(pk=self.source_file.id).exists()

@@ -1,7 +1,9 @@
 ﻿from django.contrib import admin
 from django.urls import include, path
+from config.views import health_check
 
 urlpatterns = [
+    path("health/", health_check, name="health"),
     path("admin/", admin.site.urls),
     path("accounts/", include("apps.accounts.urls")),
     path("", include("apps.workspaces.urls")),

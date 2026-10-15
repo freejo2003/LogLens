@@ -6,6 +6,7 @@ from apps.benchmarks.services.benchmark_engine import (
     benchmark_algorithm,
     benchmark_all,
 )
+from apps.search.services.matching import SearchMatchLimitError
 
 
 class BenchmarkEngineTests(SimpleTestCase):
@@ -348,6 +349,30 @@ class BenchmarkEngineTests(SimpleTestCase):
                 (0, 6, 17),
             )
 
+    def test_benchmark_applies_casefold_and_unicode_normalization(self):
+        result = benchmark_all(
+            "Straße café",
+            "STRASSE CAFE\u0301",
+            case_sensitive=False,
+            unicode_normalization="NFC",
+            warmup_runs=0,
+            trials=1,
+        )
+        self.assertTrue(result.positions_consistent)
+        for algorithm_result in result.results:
+            self.assertEqual(algorithm_result.positions, (0,))
+
+    def test_benchmark_measures_peak_python_memory(self):
+        result = benchmark_algorithm(
+            "kmp",
+            "ERROR database ERROR",
+            "ERROR",
+            warmup_runs=0,
+            trials=1,
+        )
+        self.assertIsNotNone(result.peak_memory_bytes)
+        self.assertGreater(result.peak_memory_bytes, 0)
+
     def test_overlap_positions_are_consistent(self):
         result = benchmark_all(
             "AAAA",
@@ -362,6 +387,16 @@ class BenchmarkEngineTests(SimpleTestCase):
             self.assertEqual(
                 algorithm_result.positions,
                 (0, 1, 2),
+            )
+
+    def test_benchmark_enforces_match_result_cap(self):
+        with self.assertRaises(SearchMatchLimitError):
+            benchmark_all(
+                "A" * 1000,
+                "A",
+                warmup_runs=0,
+                trials=1,
+                max_matches=5,
             )
 
     def test_empty_pattern_raises_value_error(self):

@@ -2,6 +2,7 @@ from django.conf import settings
 from django.db import models
 
 from apps.workspaces.models import Workspace
+from apps.search.services.normalization import UNICODE_NORMALIZATION_CHOICES
 
 
 class BenchmarkRun(models.Model):
@@ -32,6 +33,14 @@ class BenchmarkRun(models.Model):
     )
 
     pattern = models.TextField()
+    case_sensitive = models.BooleanField(default=True)
+    unicode_normalization = models.CharField(
+        max_length=4,
+        choices=UNICODE_NORMALIZATION_CHOICES,
+        default="none",
+    )
+    python_version = models.CharField(max_length=20, blank=True)
+    platform_name = models.CharField(max_length=255, blank=True)
 
     source_checksum = models.CharField(
         max_length=64,
@@ -238,6 +247,7 @@ class AlgorithmMetric(models.Model):
     )
 
     text_length = models.PositiveIntegerField()
+    peak_memory_bytes = models.PositiveBigIntegerField(null=True, blank=True)
 
     class Meta:
         ordering = ["algorithm"]

@@ -1,137 +1,103 @@
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 
-from apps.ingestion.models import SourceFile
-from apps.search.models import SavedSearch
-from apps.search.services.saved_searches import create_saved_search
+from apps.ingestion.models import SourceFile, TextSegment
+from apps.ingestion.services.deletion import delete_source_file
+from apps.search.models import ErrorGroup
+from apps.search.services.error_groups import (
+    extract_log_level,
+    is_groupable_log_message,
+    rebuild_error_groups_for_source_file,
+)
 from apps.workspaces.models import Workspace
 
 
-User = get_user_model()
-
-
-class SavedSearchServiceTests(TestCase):
+class ErrorGroupLifecycleTests(TestCase):
     def setUp(self):
-        self.user = User.objects.create_user(
-            username="saved-search-user",
+        self.user = get_user_model().objects.create_user(
+            username="error-group-owner",
             password="test-password",
         )
+        self.workspace = Workspace.objects.create(name="Investigation", owner=self.user)
 
-        self.workspace = Workspace.objects.create(
-            name="Saved Search Workspace",
-            owner=self.user,
-        )
-
-        self.source_file = SourceFile.objects.create(
+    def create_source(self, name):
+        return SourceFile.objects.create(
             workspace=self.workspace,
             owner=self.user,
-            original_name="application.log",
-            storage_key="tests/application.log",
-            storage_path="tests/application.log",
+            original_name=name,
+            storage_key=f"uploads/{name}",
+            storage_path=f"uploads/{name}",
             extension=".log",
             detected_type="text/plain",
-            byte_size=1024,
-            checksum="a" * 64,
+            byte_size=64,
+            checksum="c" * 64,
             extraction_status=SourceFile.ExtractionStatus.SUCCEEDED,
         )
 
-    def test_create_saved_search_persists_source_checksum(self):
-        saved_search = create_saved_search(
-            owner=self.user,
-            workspace=self.workspace,
-            source_file=self.source_file,
-            name="Database Errors",
-            pattern="ERROR database",
-            algorithm="kmp",
-            description="Database-related errors",
+    def add_error(self, source_file, *, timestamp, path):
+        return TextSegment.objects.create(
+            source_file=source_file,
+            sequence=1,
+            text=f"{timestamp} ERROR Disk read failed path={path}",
+            line_number=1,
+            parser_name="plain_text",
+            parser_version="1.1",
         )
 
-        self.assertEqual(saved_search.source_file_id, self.source_file.id)
-        self.assertEqual(
-            saved_search.source_checksum,
-            self.source_file.checksum,
-        )
+    def test_grouping_accepts_timestamped_or_bare_warning_aliases(self):
+        messages = [
+            "WARNING Database latency duration=12ms",
+            "2026-10-15T10:01:00.250Z WARN Database latency duration=30ms",
+        ]
+        self.assertEqual(extract_log_level(messages[0]), "WARNING")
+        self.assertTrue(all(is_groupable_log_message(message) for message in messages))
 
-    def test_create_saved_search_persists_configuration(self):
-        saved_search = create_saved_search(
-            owner=self.user,
-            workspace=self.workspace,
-            source_file=self.source_file,
-            name="Upload Errors",
-            pattern="upload failed",
-            algorithm="rabin_karp",
-            description="Upload failure search",
-        )
-
-        self.assertEqual(saved_search.owner_id, self.user.id)
-        self.assertEqual(saved_search.workspace_id, self.workspace.id)
-        self.assertEqual(saved_search.name, "Upload Errors")
-        self.assertEqual(saved_search.pattern, "upload failed")
-        self.assertEqual(saved_search.algorithm, "rabin_karp")
-        self.assertEqual(
-            saved_search.description,
-            "Upload failure search",
-        )
-
-    def test_create_saved_search_rejects_foreign_workspace(self):
-        other_user = User.objects.create_user(
-            username="other-user",
-            password="test-password",
-        )
-
-        other_workspace = Workspace.objects.create(
-            name="Other Workspace",
-            owner=other_user,
-        )
-
-        with self.assertRaises(PermissionError):
-            create_saved_search(
-                owner=self.user,
-                workspace=other_workspace,
-                source_file=self.source_file,
-                name="Invalid Search",
-                pattern="ERROR",
-                algorithm="kmp",
+        first = self.create_source("bare-warning.log")
+        second = self.create_source("timestamped-warning.log")
+        for source, message in zip((first, second), messages):
+            TextSegment.objects.create(
+                source_file=source,
+                sequence=1,
+                text=message,
+                line_number=1,
+                parser_name="plain_text",
+                parser_version="1.1",
             )
+            rebuild_error_groups_for_source_file(owner=self.user, source_file=source)
 
-    def test_create_saved_search_rejects_unextracted_source(self):
-        self.source_file.extraction_status = (
-            SourceFile.ExtractionStatus.PENDING
-        )
-        self.source_file.save(update_fields=["extraction_status"])
+        group = ErrorGroup.objects.get(workspace=self.workspace)
+        self.assertEqual(group.occurrence_count, 2)
 
-        with self.assertRaises(ValueError):
-            create_saved_search(
-                owner=self.user,
-                workspace=self.workspace,
-                source_file=self.source_file,
-                name="Pending Search",
-                pattern="ERROR",
-                algorithm="kmp",
-            )
+    def test_group_count_accumulates_and_rebuilds_across_source_files(self):
+        first = self.create_source("first.log")
+        second = self.create_source("second.log")
+        self.add_error(first, timestamp="2026-10-15 10:00:00", path="/var/a")
+        self.add_error(second, timestamp="2026-10-15 10:01:00", path="/var/b")
 
-    def test_saved_search_is_persisted_in_database(self):
-        saved_search = create_saved_search(
-            owner=self.user,
-            workspace=self.workspace,
-            source_file=self.source_file,
-            name="Persistent Search",
-            pattern="WARN",
-            algorithm="naive",
-        )
+        rebuild_error_groups_for_source_file(owner=self.user, source_file=first)
+        group = ErrorGroup.objects.get(workspace=self.workspace)
+        self.assertEqual(group.occurrence_count, 1)
 
-        saved_search.refresh_from_db()
+        rebuild_error_groups_for_source_file(owner=self.user, source_file=second)
+        group.refresh_from_db()
+        self.assertEqual(group.occurrence_count, 2)
 
-        self.assertEqual(saved_search.source_file_id, self.source_file.id)
-        self.assertEqual(
-            saved_search.source_checksum,
-            self.source_file.checksum,
-        )
-        self.assertEqual(saved_search.pattern, "WARN")
-        self.assertEqual(saved_search.algorithm, "naive")
+        rebuild_error_groups_for_source_file(owner=self.user, source_file=first)
+        group.refresh_from_db()
+        self.assertEqual(group.occurrence_count, 2)
 
-        self.assertTrue(
-            SavedSearch.objects.filter(
-                pk=saved_search.pk,
-            ).exists()
-        )
+    def test_deleting_source_updates_and_removes_error_groups(self):
+        first = self.create_source("delete-me.log")
+        second = self.create_source("keep-me.log")
+        self.add_error(first, timestamp="2026-10-15 10:00:00", path="/var/a")
+        self.add_error(second, timestamp="2026-10-15 10:01:00", path="/var/b")
+        rebuild_error_groups_for_source_file(owner=self.user, source_file=first)
+        rebuild_error_groups_for_source_file(owner=self.user, source_file=second)
+        group = ErrorGroup.objects.get(workspace=self.workspace)
+
+        delete_source_file(source_file=first, owner=self.user)
+        group.refresh_from_db()
+        self.assertEqual(group.occurrence_count, 1)
+
+        delete_source_file(source_file=second, owner=self.user)
+        self.assertFalse(ErrorGroup.objects.filter(pk=group.pk).exists())

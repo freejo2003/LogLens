@@ -7,6 +7,7 @@ from docx import Document
 
 from apps.ingestion.models import SourceFile
 from apps.ingestion.services.docx_extractor import extract_docx_file
+from apps.ingestion.services.errors import ExtractionError
 from apps.workspaces.models import Workspace
 
 
@@ -67,7 +68,7 @@ class DocxExtractorTests(TestCase):
             )
             self.assertEqual(
                 segments[0].parser_version,
-                "1.0",
+                "1.1",
             )
 
     def test_rejects_non_docx_file(self):
@@ -102,5 +103,5 @@ class DocxExtractorTests(TestCase):
             checksum="test-checksum",
         )
 
-        with self.assertRaises(FileNotFoundError):
+        with self.assertRaises(ExtractionError):
             extract_docx_file(source_file)

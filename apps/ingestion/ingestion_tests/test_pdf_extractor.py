@@ -5,6 +5,7 @@ from django.test import TestCase
 
 from apps.ingestion.models import SourceFile
 from apps.ingestion.services.pdf_extractor import extract_pdf_file
+from apps.ingestion.services.errors import OCRNeededError, ExtractionError
 from apps.workspaces.models import Workspace
 from django.contrib.auth import get_user_model
 
@@ -46,16 +47,8 @@ class PdfExtractorTests(TestCase):
                 checksum="test-checksum",
             )
 
-            count = extract_pdf_file(source_file)
-
-            self.assertEqual(count, 1)
-
-            segment = source_file.text_segments.get()
-
-            self.assertEqual(segment.sequence, 1)
-            self.assertEqual(segment.page_number, 1)
-            self.assertEqual(segment.parser_name, "pypdf")
-            self.assertEqual(segment.parser_version, "1.0")
+            with self.assertRaises(OCRNeededError):
+                extract_pdf_file(source_file)
 
     def test_rejects_non_pdf_file(self):
         source_file = SourceFile(
@@ -86,5 +79,5 @@ class PdfExtractorTests(TestCase):
             checksum="test-checksum",
         )
 
-        with self.assertRaises(FileNotFoundError):
+        with self.assertRaises(ExtractionError):
             extract_pdf_file(source_file)

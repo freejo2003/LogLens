@@ -1,8 +1,13 @@
 import hashlib
+import logging
+import platform
 
+from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 
+from apps.accounts.audit import record_event
+from apps.accounts.models import AuditEvent
 from apps.benchmarks.models import AlgorithmMetric, BenchmarkRun
 from apps.benchmarks.services.benchmark_engine import benchmark_all
 
@@ -12,6 +17,8 @@ ALGORITHM_VERSIONS = {
     "kmp": "1.0",
     "rabin_karp": "1.0",
 }
+
+logger = logging.getLogger(__name__)
 
 
 def calculate_input_checksum(text: str) -> str:
@@ -25,6 +32,8 @@ def create_benchmark_run(
     text: str,
     pattern: str,
     source_file=None,
+    case_sensitive: bool = True,
+    unicode_normalization: str = "none",
 ) -> BenchmarkRun:
     if workspace.owner_id != owner.id:
         raise PermissionError(
@@ -48,6 +57,10 @@ def create_benchmark_run(
         owner=owner,
         source_file=source_file,
         pattern=pattern,
+        case_sensitive=case_sensitive,
+        unicode_normalization=unicode_normalization,
+        python_version=platform.python_version(),
+        platform_name=platform.platform(),
         source_checksum=source_checksum,
         input_checksum=input_checksum,
         text_length=len(text),
@@ -55,7 +68,14 @@ def create_benchmark_run(
     )
 
     try:
-        result = benchmark_all(text, pattern)
+        result = benchmark_all(
+            text,
+            pattern,
+            max_naive_comparisons=settings.MAX_NAIVE_COMPARISONS,
+            max_matches=settings.MAX_SEARCH_MATCHES,
+            case_sensitive=case_sensitive,
+            unicode_normalization=unicode_normalization,
+        )
 
         with transaction.atomic():
             benchmark.positions_consistent = result.positions_consistent
@@ -68,6 +88,17 @@ def create_benchmark_run(
                     "status",
                     "completed_at",
                 ]
+            )
+            record_event(
+                actor=owner,
+                workspace=workspace,
+                action=AuditEvent.Action.BENCHMARK_COMPLETED,
+                object_type="BenchmarkRun",
+                object_id=benchmark.pk,
+                details={
+                    "positions_consistent": result.positions_consistent,
+                    "algorithm_count": len(result.results),
+                },
             )
 
             AlgorithmMetric.objects.bulk_create(
@@ -163,6 +194,7 @@ def create_benchmark_run(
                         match_count=metric.match_count,
                         positions=list(metric.positions),
                         text_length=metric.text_length,
+                        peak_memory_bytes=metric.peak_memory_bytes,
                     )
                     for metric in result.results
                 ]
@@ -172,7 +204,7 @@ def create_benchmark_run(
 
     except Exception as exc:
         benchmark.status = BenchmarkRun.Status.FAILED
-        benchmark.error_message = str(exc)
+        benchmark.error_message = "The benchmark could not be completed. Try again or contact an administrator."
         benchmark.completed_at = timezone.now()
 
         benchmark.save(
@@ -181,6 +213,19 @@ def create_benchmark_run(
                 "error_message",
                 "completed_at",
             ]
+        )
+        record_event(
+            actor=owner,
+            workspace=workspace,
+            action=AuditEvent.Action.BENCHMARK_FAILED,
+            object_type="BenchmarkRun",
+            object_id=benchmark.pk,
+        )
+        logger.error(
+            "Benchmark run failed for run id=%s owner_id=%s error_type=%s",
+            benchmark.pk,
+            owner.pk,
+            type(exc).__name__,
         )
 
         raise

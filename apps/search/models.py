@@ -2,6 +2,7 @@ from django.conf import settings
 from django.db import models
 
 from apps.workspaces.models import Workspace
+from apps.search.services.normalization import UNICODE_NORMALIZATION_CHOICES
 
 
 class IndicatorRule(models.Model):
@@ -64,6 +65,12 @@ class SavedSearch(models.Model):
     name = models.CharField(max_length=200)
     pattern = models.TextField()
     algorithm = models.CharField(max_length=50)
+    case_sensitive = models.BooleanField(default=True)
+    unicode_normalization = models.CharField(
+        max_length=4,
+        choices=UNICODE_NORMALIZATION_CHOICES,
+        default="none",
+    )
     description = models.TextField(blank=True)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -108,8 +115,22 @@ class SearchRun(models.Model):
         blank=True,
         related_name="search_runs",
     )
+    indicator_rule = models.ForeignKey(
+        IndicatorRule,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="search_runs",
+    )
+    indicator_name_snapshot = models.CharField(max_length=200, blank=True)
     pattern = models.TextField()
     algorithm = models.CharField(max_length=50)
+    case_sensitive = models.BooleanField(default=True)
+    unicode_normalization = models.CharField(
+        max_length=4,
+        choices=UNICODE_NORMALIZATION_CHOICES,
+        default="none",
+    )
     source_checksum = models.CharField(max_length=64, blank=True)
     status = models.CharField(
         max_length=20,

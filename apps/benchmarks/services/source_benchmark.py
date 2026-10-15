@@ -27,6 +27,8 @@ def benchmark_source_file(
     source_file: SourceFile,
     owner,
     pattern: str,
+    case_sensitive: bool = True,
+    unicode_normalization: str = "none",
 ) -> BenchmarkRun:
     """
     Benchmark an extracted source file using all registered
@@ -54,4 +56,6 @@ def benchmark_source_file(
         text=text,
         pattern=pattern,
         source_file=source_file,
+        case_sensitive=case_sensitive,
+        unicode_normalization=unicode_normalization,
     )

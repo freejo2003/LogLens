@@ -8,6 +8,7 @@ from apps.ingestion.services.storage import (
     calculate_sha256,
     delete_private_file,
     generate_storage_key,
+    resolve_private_path,
     save_private_file,
 )
 
@@ -116,3 +117,11 @@ class PrivateFileStorageTests(SimpleTestCase):
         delete_private_file(str(missing_path))
 
         self.assertFalse(missing_path.exists())
+
+    def test_storage_path_rejects_traversal_outside_private_root(self):
+        with self.assertRaises(ValueError):
+            resolve_private_path(self.test_root / ".." / "outside.txt")
+
+    def test_storage_path_rejects_absolute_path_outside_private_root(self):
+        with self.assertRaises(ValueError):
+            resolve_private_path(Path(settings.BASE_DIR).parent / "outside.txt")

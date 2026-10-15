@@ -38,7 +38,7 @@ Review matching log entries, source locations, and search metadata.
 
                 <!-- Pattern -->
 
-                <div class="col-12 col-lg-6">
+                <div class="col-12 col-lg-4">
 
                     <div class="small text-secondary mb-2">
                         Search pattern
@@ -56,6 +56,12 @@ Review matching log entries, source locations, and search metadata.
 
                     </div>
 
+                    {% if search_run.indicator_name_snapshot %}
+                    <div class="small text-secondary mt-2">
+                        Indicator rule: <span class="fw-semibold">{{ search_run.indicator_name_snapshot }}</span>
+                    </div>
+                    {% endif %}
+
                 </div>
 
 
@@ -71,6 +77,16 @@ Review matching log entries, source locations, and search metadata.
                         {{ search_run.algorithm }}
                     </div>
 
+                </div>
+
+                <div class="col-12 col-sm-6 col-lg-2">
+                    <div class="small text-secondary mb-1">Case</div>
+                    <div class="fw-semibold">{% if search_run.case_sensitive %}Sensitive{% else %}Insensitive{% endif %}</div>
+                </div>
+
+                <div class="col-12 col-sm-6 col-lg-2">
+                    <div class="small text-secondary mb-1">Unicode</div>
+                    <div class="fw-semibold">{{ search_run.unicode_normalization }}</div>
                 </div>
 
 
@@ -118,6 +134,29 @@ Review matching log entries, source locations, and search metadata.
         </div>
 
     </div>
+
+    {% if saved_search_form %}
+    <div class="loglens-card mb-4">
+        <div class="p-4">
+            <h2 class="h5">Save this search</h2>
+            <form method="post" action="{% url 'search:save' %}" class="d-flex flex-wrap align-items-end gap-3">
+                {% csrf_token %}
+                {{ saved_search_form.workspace.as_hidden }}
+                {{ saved_search_form.source_file.as_hidden }}
+                {{ saved_search_form.pattern.as_hidden }}
+                {{ saved_search_form.algorithm.as_hidden }}
+                {{ saved_search_form.case_sensitive.as_hidden }}
+                {{ saved_search_form.unicode_normalization.as_hidden }}
+                {{ saved_search_form.description.as_hidden }}
+                <div>
+                    <label class="form-label" for="{{ saved_search_form.name.id_for_label }}">Search name</label>
+                    {{ saved_search_form.name }}
+                </div>
+                <button class="btn btn-outline-primary" type="submit">Save configuration</button>
+            </form>
+        </div>
+    </div>
+    {% endif %}
 
 
     <!-- Source Information -->
@@ -193,8 +232,7 @@ Review matching log entries, source locations, and search metadata.
                 {% if match_results %}
 
                     <span class="badge text-bg-secondary">
-                        {{ match_results|length }}
-                        result{{ match_results|length|pluralize }}
+                        Showing {{ match_results.start_index }}–{{ match_results.end_index }} of {{ search_run.total_match_count }} matches
                     </span>
 
                 {% endif %}
@@ -325,7 +363,7 @@ Review matching log entries, source locations, and search metadata.
 
                                         <div class="d-flex flex-wrap gap-1">
 
-                                            {% for position in result.positions %}
+                                            {% for position in result.display_positions %}
 
                                                 <code class="small border rounded px-2 py-1">
                                                     {{ position }}
@@ -334,6 +372,7 @@ Review matching log entries, source locations, and search metadata.
                                             {% endfor %}
 
                                         </div>
+                                        {% if result.positions_truncated %}<div class="small text-muted mt-1">First 100 positions shown; exports include all matches.</div>{% endif %}
 
                                     {% else %}
 
@@ -357,7 +396,7 @@ Review matching log entries, source locations, and search metadata.
                                         <pre
                                             class="mb-0"
                                             style="white-space: pre-wrap; font-family: inherit;"
-                                        >{{ result.segment.text }}</pre>
+                                        >{{ result.context_snippet }}</pre>
                                     </div>
 
                                 </td>
@@ -371,6 +410,20 @@ Review matching log entries, source locations, and search metadata.
                 </table>
 
             </div>
+
+            {% if match_results.has_other_pages %}
+            <nav class="p-3" aria-label="Search result pages">
+                <ul class="pagination pagination-sm mb-0 justify-content-end">
+                    {% if match_results.has_previous %}
+                    <li class="page-item"><a class="page-link" href="?page={{ match_results.previous_page_number }}" aria-label="Previous page">Previous</a></li>
+                    {% else %}<li class="page-item disabled"><span class="page-link">Previous</span></li>{% endif %}
+                    <li class="page-item disabled"><span class="page-link" aria-current="page">Page {{ match_results.number }} of {{ match_results.paginator.num_pages }}</span></li>
+                    {% if match_results.has_next %}
+                    <li class="page-item"><a class="page-link" href="?page={{ match_results.next_page_number }}" aria-label="Next page">Next</a></li>
+                    {% else %}<li class="page-item disabled"><span class="page-link">Next</span></li>{% endif %}
+                </ul>
+            </nav>
+            {% endif %}
 
         {% else %}
 
@@ -466,6 +519,13 @@ Review matching log entries, source locations, and search metadata.
 
                         </div>
 
+                    </div>
+
+                    <div class="col-12 col-md-6 col-xl-3">
+                        <div class="border rounded-3 p-3 h-100">
+                            <div class="small text-secondary mb-1">Unicode normalization</div>
+                            <div class="fw-semibold">{{ search_run.unicode_normalization }}</div>
+                        </div>
                     </div>
 
 
@@ -587,6 +647,11 @@ Review matching log entries, source locations, and search metadata.
     <!-- Actions -->
 
     <div class="d-flex flex-wrap gap-2">
+
+        {% if search_run %}
+        <a href="{% url 'search:history-export-csv' search_run.id %}" class="btn btn-outline-secondary">Export CSV</a>
+        <a href="{% url 'search:history-export-json' search_run.id %}" class="btn btn-outline-secondary">Export JSON</a>
+        {% endif %}
 
         <a
             href="{% url 'search:run' %}"

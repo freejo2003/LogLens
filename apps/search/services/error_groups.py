@@ -1,5 +1,6 @@
 import re
 
+from django.db.models import Count
 from django.db import transaction
 
 from apps.ingestion.models import SourceFile, TextSegment
@@ -7,7 +8,8 @@ from apps.search.models import ErrorGroup, GroupMember
 
 
 TIMESTAMP_PREFIX_PATTERN = re.compile(
-    r"^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}\s+"
+    r"^\d{4}-\d{2}-\d{2}[T\s]+\d{2}:\d{2}:\d{2}"
+    r"(?:[.,]\d+)?(?:Z|[+-]\d{2}:?\d{2})?\s+"
 )
 
 LOG_LEVEL_PATTERN = re.compile(
@@ -32,12 +34,7 @@ def extract_log_level(text: str) -> str | None:
     if not isinstance(text, str):
         raise TypeError("Log message must be a string.")
 
-    timestamp_match = TIMESTAMP_PREFIX_PATTERN.match(text.strip())
-
-    if not timestamp_match:
-        return None
-
-    remaining = text[timestamp_match.end():]
+    remaining = TIMESTAMP_PREFIX_PATTERN.sub("", text.strip(), count=1)
 
     level_match = LOG_LEVEL_PATTERN.match(remaining)
 
@@ -49,7 +46,7 @@ def extract_log_level(text: str) -> str | None:
 
 def is_groupable_log_message(text: str) -> bool:
     level = extract_log_level(text)
-    return level in GROUPABLE_LOG_LEVELS
+    return level in GROUPABLE_LOG_LEVELS or level == "WARNING"
 
 
 def normalize_error_message(text: str) -> str:
@@ -379,22 +376,16 @@ def rebuild_error_groups_for_source_file(
     # ---------------------------------------------------------
     # 9. Update occurrence counts for affected groups.
     # ---------------------------------------------------------
-    occurrence_counts = {
-        normalized_message: len(segment_list)
-        for normalized_message, segment_list
-        in grouped_segments.items()
-    }
-
-    for normalized_message, count in occurrence_counts.items():
-        error_group = error_groups[normalized_message]
-
-        ErrorGroup.objects.filter(
-            pk=error_group.pk
-        ).update(
-            occurrence_count=count
-        )
-
-        error_group.occurrence_count = count
+    group_ids = [group.pk for group in error_groups.values()]
+    occurrence_counts = dict(
+        GroupMember.objects.filter(error_group_id__in=group_ids)
+        .values_list("error_group_id")
+        .annotate(total=Count("pk"))
+    )
+    groups_to_update = list(error_groups.values())
+    for error_group in groups_to_update:
+        error_group.occurrence_count = occurrence_counts.get(error_group.pk, 0)
+    ErrorGroup.objects.bulk_update(groups_to_update, ["occurrence_count"])
 
     # ---------------------------------------------------------
     # 10. Return the newly rebuilt memberships.

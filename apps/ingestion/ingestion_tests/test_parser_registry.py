@@ -11,13 +11,13 @@ class ParserRegistryTests(SimpleTestCase):
     def test_registry_contains_all_currently_supported_parsers(self):
         registry = build_parser_registry()
 
-        self.assertEqual(len(registry), 3)
+        self.assertEqual(len(registry), 4)
 
         parser_names = {adapter.name for adapter in registry}
 
         self.assertEqual(
             parser_names,
-            {"plain_text", "pypdf", "python-docx"},
+            {"plain_text", "pypdf", "python-docx", "libreoffice"},
         )
 
     def test_registry_contains_text_parser(self):
@@ -29,7 +29,7 @@ class ParserRegistryTests(SimpleTestCase):
             if adapter.name == "plain_text"
         )
 
-        self.assertEqual(adapter.version, "1.0")
+        self.assertEqual(adapter.version, "1.1")
         self.assertEqual(
             adapter.extensions,
             frozenset({".txt", ".log"}),
@@ -44,7 +44,7 @@ class ParserRegistryTests(SimpleTestCase):
             if adapter.name == "pypdf"
         )
 
-        self.assertEqual(adapter.version, "1.0")
+        self.assertEqual(adapter.version, "1.1")
         self.assertEqual(adapter.extensions, frozenset({".pdf"}))
 
     def test_registry_contains_docx_parser(self):
@@ -56,8 +56,15 @@ class ParserRegistryTests(SimpleTestCase):
             if adapter.name == "python-docx"
         )
 
-        self.assertEqual(adapter.version, "1.0")
+        self.assertEqual(adapter.version, "1.1")
         self.assertEqual(adapter.extensions, frozenset({".docx"}))
+
+    def test_registry_contains_legacy_doc_parser(self):
+        adapter = next(
+            adapter for adapter in build_parser_registry()
+            if adapter.name == "libreoffice"
+        )
+        self.assertEqual(adapter.extensions, frozenset({".doc"}))
 
     def test_resolve_parser_for_txt(self):
         source_file = type(
@@ -96,7 +103,7 @@ class ParserRegistryTests(SimpleTestCase):
         source_file = type(
             "SourceFileStub",
             (),
-            {"extension": ".doc"},
+            {"extension": ".odt"},
         )()
 
         with self.assertRaises(ValueError):
@@ -116,8 +123,8 @@ class ParserRegistryTests(SimpleTestCase):
             parser=fake_parser,
         )
 
-        self.assertEqual(len(registry), 3)
-        self.assertEqual(len(updated_registry), 4)
+        self.assertEqual(len(registry), 4)
+        self.assertEqual(len(updated_registry), 5)
         self.assertEqual(
             updated_registry[-1].name,
             "legacy_doc",

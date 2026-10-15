@@ -1,3 +1,1 @@
-from django.db import models
-
-# Create your models here.
+"""Report output is derived from persisted benchmark metrics."""

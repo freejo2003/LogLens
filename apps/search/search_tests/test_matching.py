@@ -1,6 +1,7 @@
 from django.test import SimpleTestCase
 
 from apps.search.services.matching import (
+    SearchMatchLimitError,
     build_kmp_failure_table,
     kmp_search,
     naive_search,
@@ -13,6 +14,12 @@ from apps.search.services.matching import (
 
 
 class MatchingTests(SimpleTestCase):
+
+    def test_match_result_cap_is_enforced_by_each_pure_algorithm(self):
+        for algorithm in ("naive", "kmp", "rabin_karp"):
+            with self.subTest(algorithm=algorithm):
+                with self.assertRaises(SearchMatchLimitError):
+                    run_search(algorithm, "A" * 1000, "A", max_matches=5)
 
     def test_naive_search_finds_all_matches(self):
         self.assertEqual(

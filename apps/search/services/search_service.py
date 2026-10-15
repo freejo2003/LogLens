@@ -1,7 +1,14 @@
 from dataclasses import dataclass
 
+from django.conf import settings
+
 from apps.ingestion.models import TextSegment
 from apps.search.services.matching import run_search
+from apps.search.services.normalization import normalize_search_text
+
+
+class SearchWorkLimitError(ValueError):
+    """Raised when a request would exceed the configured Naive work budget."""
 
 
 @dataclass(frozen=True)
@@ -31,6 +38,8 @@ def search_text_segments(
     *,
     pattern: str,
     algorithm: str,
+    case_sensitive: bool = True,
+    unicode_normalization: str = "none",
 ) -> list[SegmentSearchResult]:
     """
     Search extracted text segments using the selected algorithm.
@@ -44,16 +53,37 @@ def search_text_segments(
         return []
 
     results: list[SegmentSearchResult] = []
+    normalized_pattern = normalize_search_text(
+        pattern,
+        case_sensitive=case_sensitive,
+        unicode_normalization=unicode_normalization,
+    )
+    estimated_comparisons = 0
+    total_matches = 0
 
     for segment in segments:
+        searchable_text = normalize_search_text(
+            segment.text,
+            case_sensitive=case_sensitive,
+            unicode_normalization=unicode_normalization,
+        )
+        if algorithm == "naive":
+            estimated_comparisons += len(searchable_text) * len(normalized_pattern)
+            if estimated_comparisons > settings.MAX_NAIVE_COMPARISONS:
+                raise SearchWorkLimitError(
+                    "This Naive search exceeds the configured work limit. Use KMP or Rabin-Karp, or narrow the source text."
+                )
         match_result = run_search(
             algorithm,
-            segment.text,
-            pattern,
+            searchable_text,
+            normalized_pattern,
+            max_matches=max(0, settings.MAX_SEARCH_MATCHES - total_matches),
         )
 
         if not match_result.positions:
             continue
+
+        total_matches += len(match_result.positions)
 
         results.append(
             SegmentSearchResult(
@@ -78,6 +108,8 @@ def search_source_file(
     *,
     pattern: str,
     algorithm: str,
+    case_sensitive: bool = True,
+    unicode_normalization: str = "none",
 ) -> list[SegmentSearchResult]:
     """
     Search all extracted segments belonging to one SourceFile.
@@ -95,4 +127,6 @@ def search_source_file(
         segments,
         pattern=pattern,
         algorithm=algorithm,
+        case_sensitive=case_sensitive,
+        unicode_normalization=unicode_normalization,
     )

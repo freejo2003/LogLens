@@ -29,6 +29,7 @@ class SourceFile(models.Model):
 
     extension = models.CharField(max_length=20)
     detected_type = models.CharField(max_length=100)
+    text_encoding = models.CharField(max_length=40, blank=True)
     byte_size = models.BigIntegerField()
 
     checksum = models.CharField(max_length=64)
@@ -40,6 +41,8 @@ class SourceFile(models.Model):
         choices=ExtractionStatus.choices,
         default=ExtractionStatus.PENDING,
     )
+    extraction_error = models.CharField(max_length=255, blank=True)
+    processing_started_at = models.DateTimeField(null=True, blank=True)
 
     retention_until = models.DateTimeField(null=True, blank=True)
     deleted_at = models.DateTimeField(null=True, blank=True)

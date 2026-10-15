@@ -1,4 +1,5 @@
 from io import BytesIO
+from zipfile import ZIP_DEFLATED, ZipFile
 
 from django.test import SimpleTestCase
 
@@ -64,7 +65,11 @@ class ValidateFileSignatureTests(SimpleTestCase):
             validate_file_signature(file_obj, ".pdf")
 
     def test_valid_docx_is_accepted(self):
-        file_obj = BytesIO(b"PK\x03\x04sample docx content")
+        file_obj = BytesIO()
+        with ZipFile(file_obj, "w", compression=ZIP_DEFLATED) as archive:
+            archive.writestr("[Content_Types].xml", "<Types/>")
+            archive.writestr("word/document.xml", "<document/>")
+        file_obj.seek(0)
 
         validate_file_signature(file_obj, ".docx")
 
@@ -91,7 +96,7 @@ class ValidateFileSignatureTests(SimpleTestCase):
         validate_file_signature(file_obj, ".log")
 
     def test_invalid_utf8_text_is_rejected(self):
-        file_obj = BytesIO(b"\xff\xfe\xfd\xfc")
+        file_obj = BytesIO(b"\x00\x01\xff\xfe")
 
         with self.assertRaises(UploadValidationError):
             validate_file_signature(file_obj, ".txt")

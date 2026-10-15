@@ -54,7 +54,21 @@ class RabinKarpSearchResult:
 MatchFunction = Callable[[str, str], list[int]]
 
 
-def naive_search(text: str, pattern: str) -> list[int]:
+class SearchMatchLimitError(ValueError):
+    """Raised when a search would return more offsets than allowed."""
+
+
+def _append_match(positions: list[int], position: int, max_matches: int | None) -> None:
+    if max_matches is not None and len(positions) >= max_matches:
+        raise SearchMatchLimitError(
+            "The search exceeds the configured match-result limit. Narrow the source text or use a more specific pattern."
+        )
+    positions.append(position)
+
+
+def naive_search(
+    text: str, pattern: str, *, max_matches: int | None = None
+) -> list[int]:
     """
     Find all occurrences of pattern in text using the Naive
     String Matching algorithm.
@@ -84,7 +98,7 @@ def naive_search(text: str, pattern: str) -> list[int]:
                 break
 
         if match:
-            positions.append(start)
+            _append_match(positions, start, max_matches)
 
     return positions
 
@@ -123,6 +137,8 @@ def kmp_search_prepared(
     text: str,
     pattern: str,
     lps: list[int],
+    *,
+    max_matches: int | None = None,
 ) -> list[int]:
     """
     Execute KMP search using an already prepared LPS table.
@@ -144,7 +160,7 @@ def kmp_search_prepared(
             pattern_index += 1
 
             if pattern_index == len(pattern):
-                positions.append(text_index - pattern_index)
+                _append_match(positions, text_index - pattern_index, max_matches)
 
                 # Continue searching so overlapping matches are found.
                 pattern_index = lps[pattern_index - 1]
@@ -158,7 +174,9 @@ def kmp_search_prepared(
     return positions
 
 
-def kmp_search(text: str, pattern: str) -> list[int]:
+def kmp_search(
+    text: str, pattern: str, *, max_matches: int | None = None
+) -> list[int]:
     """
     Find all occurrences of pattern in text using Knuth-Morris-Pratt.
 
@@ -176,6 +194,7 @@ def kmp_search(text: str, pattern: str) -> list[int]:
         text,
         pattern,
         lps,
+        max_matches=max_matches,
     )
 
 
@@ -214,6 +233,8 @@ def _rabin_karp_search_prepared(
     text: str,
     pattern: str,
     prepared_state: tuple[int, int, int],
+    *,
+    max_matches: int | None = None,
 ) -> RabinKarpSearchResult:
     """
     Execute Rabin-Karp using already prepared pattern state.
@@ -258,7 +279,7 @@ def _rabin_karp_search_prepared(
             if text[
                 start : start + pattern_length
             ] == pattern:
-                positions.append(start)
+                _append_match(positions, start, max_matches)
             else:
                 collision_count += 1
 
@@ -284,7 +305,9 @@ def _rabin_karp_search_prepared(
     )
 
 
-def rabin_karp_search(text: str, pattern: str) -> list[int]:
+def rabin_karp_search(
+    text: str, pattern: str, *, max_matches: int | None = None
+) -> list[int]:
     """
     Find all occurrences of pattern in text using Rabin-Karp.
 
@@ -300,6 +323,7 @@ def rabin_karp_search(text: str, pattern: str) -> list[int]:
         text,
         pattern,
         prepared_state,
+        max_matches=max_matches,
     )
 
     return list(result.positions)
@@ -348,6 +372,8 @@ def prepare_search(
 def search_prepared(
     prepared: PreparedSearch,
     text: str,
+    *,
+    max_matches: int | None = None,
 ) -> MatchResult:
     """
     Execute a prepared search.
@@ -361,6 +387,7 @@ def search_prepared(
         positions = naive_search(
             text,
             pattern,
+            max_matches=max_matches,
         )
 
     elif algorithm == "kmp":
@@ -368,6 +395,7 @@ def search_prepared(
             text,
             pattern,
             prepared.state,
+            max_matches=max_matches,
         )
 
     elif algorithm == "rabin_karp":
@@ -375,6 +403,7 @@ def search_prepared(
             text,
             pattern,
             prepared.state,
+            max_matches=max_matches,
         )
         positions = list(detailed_result.positions)
 
@@ -395,6 +424,8 @@ def search_prepared(
 def rabin_karp_search_detailed(
     text: str,
     pattern: str,
+    *,
+    max_matches: int | None = None,
 ) -> RabinKarpSearchResult:
     """
     Execute Rabin-Karp and return collision/verification counters.
@@ -405,6 +436,7 @@ def rabin_karp_search_detailed(
         text,
         pattern,
         prepared_state,
+        max_matches=max_matches,
     )
 
 
@@ -419,6 +451,8 @@ def run_search(
     algorithm: str,
     text: str,
     pattern: str,
+    *,
+    max_matches: int | None = None,
 ) -> MatchResult:
     """
     Execute one registered search algorithm and return
@@ -435,4 +469,5 @@ def run_search(
     return search_prepared(
         prepared,
         text,
+        max_matches=max_matches,
     )

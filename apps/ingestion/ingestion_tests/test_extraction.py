@@ -6,6 +6,7 @@ from django.test import TestCase
 
 from apps.ingestion.models import SourceFile, TextSegment
 from apps.ingestion.services.extraction import process_source_file
+from apps.ingestion.services.errors import ExtractionError
 from apps.workspaces.models import Workspace
 
 
@@ -70,7 +71,7 @@ class SourceFileExtractionTests(TestCase):
             checksum="test-checksum",
         )
 
-        with self.assertRaises(FileNotFoundError):
+        with self.assertRaises(ExtractionError):
             process_source_file(source_file)
 
         source_file.refresh_from_db()
@@ -78,6 +79,10 @@ class SourceFileExtractionTests(TestCase):
         self.assertEqual(
             source_file.extraction_status,
             SourceFile.ExtractionStatus.FAILED,
+        )
+        self.assertEqual(
+            source_file.extraction_error,
+            "The original upload is unavailable. Upload the file again.",
         )
 
     def test_successful_extraction_replaces_existing_segments(self):
@@ -121,7 +126,7 @@ class SourceFileExtractionTests(TestCase):
 
             self.assertEqual(len(segments), 1)
             self.assertEqual(segments[0].text, "updated content")
-            self.assertEqual(segments[0].parser_version, "1.0")
+            self.assertEqual(segments[0].parser_version, "1.1")
 
     def test_loglens_test_application_file_extracts_26_segments(self):
         project_root = Path(__file__).resolve().parents[3]

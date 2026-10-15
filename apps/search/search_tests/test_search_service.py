@@ -1,5 +1,5 @@
 from django.contrib.auth import get_user_model
-from django.test import TestCase
+from django.test import TestCase, override_settings
 
 from apps.ingestion.models import SourceFile, TextSegment
 from apps.search.services.search_service import (
@@ -169,3 +169,71 @@ class SearchServiceTests(TestCase):
         )
 
         self.assertEqual(results, [])
+
+    def test_case_insensitive_search_uses_unicode_casefold(self):
+        segment = TextSegment.objects.create(
+            source_file=self.source_file,
+            sequence=5,
+            text="Straße login",
+            line_number=5,
+            parser_name="plain_text",
+            parser_version="1.1",
+        )
+        results = search_text_segments(
+            [segment],
+            pattern="STRASSE",
+            algorithm="kmp",
+            case_sensitive=False,
+        )
+        self.assertEqual(results[0].positions, (0,))
+
+    def test_unicode_normalization_matches_composed_and_decomposed_text(self):
+        segment = TextSegment.objects.create(
+            source_file=self.source_file,
+            sequence=6,
+            text="cafe\u0301",
+            line_number=6,
+            parser_name="plain_text",
+            parser_version="1.1",
+        )
+        results = search_text_segments(
+            [segment],
+            pattern="café",
+            algorithm="rabin_karp",
+            unicode_normalization="NFC",
+        )
+        self.assertEqual(results[0].positions, (0,))
+
+    @override_settings(MAX_NAIVE_COMPARISONS=10)
+    def test_naive_search_rejects_excessive_worst_case_work(self):
+        from apps.search.services.search_service import SearchWorkLimitError
+
+        segment = TextSegment.objects.create(
+            source_file=self.source_file,
+            sequence=7,
+            text="x" * 20,
+            line_number=7,
+            parser_name="plain_text",
+            parser_version="1.1",
+        )
+        with self.assertRaises(SearchWorkLimitError):
+            search_text_segments(
+                [segment],
+                pattern="zz",
+                algorithm="naive",
+            )
+
+    @override_settings(MAX_SEARCH_MATCHES=2)
+    def test_search_rejects_excessive_match_results_before_materializing_them(self):
+        from apps.search.services.matching import SearchMatchLimitError
+
+        segment = TextSegment.objects.create(
+            source_file=self.source_file,
+            sequence=8,
+            text="A" * 1000,
+            line_number=8,
+            parser_name="plain_text",
+            parser_version="1.1",
+        )
+        with self.assertRaises(SearchMatchLimitError):
+            search_text_segments([segment], pattern="A", algorithm="kmp")

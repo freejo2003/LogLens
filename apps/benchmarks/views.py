@@ -28,6 +28,8 @@ def benchmark_workspace(request):
                     source_file=source_file,
                     owner=request.user,
                     pattern=pattern,
+                    case_sensitive=form.cleaned_data["case_sensitive"],
+                    unicode_normalization=form.cleaned_data["unicode_normalization"],
                 )
             except (PermissionError, ValueError) as exc:
                 form.add_error(

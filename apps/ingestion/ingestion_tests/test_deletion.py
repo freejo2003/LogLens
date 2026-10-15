@@ -221,10 +221,11 @@ class SourceFileDeletionTests(TestCase):
         )
 
         try:
-            delete_source_file(
-                source_file=source_file,
-                owner=self.user,
-            )
+            with self.captureOnCommitCallbacks(execute=True):
+                delete_source_file(
+                    source_file=source_file,
+                    owner=self.user,
+                )
 
             self.assertFalse(physical_path.exists())
         finally:

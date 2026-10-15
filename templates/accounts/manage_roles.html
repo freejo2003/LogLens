@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Roles — LogLens{% endblock %}
+{% block page_title %}Manage Roles{% endblock %}
+{% block page_subtitle %}Assign one LogLens role to an account. Each change is recorded with your Admin account.{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <div class="col-12 col-xl-5">
+        <div class="loglens-card p-4">
+            <h2 class="h5 mb-3">Assign role</h2>
+            <form method="post">
+                {% csrf_token %}
+                {{ form.as_p }}
+                <button class="btn btn-primary" type="submit">Save role</button>
+            </form>
+        </div>
+    </div>
+    <div class="col-12 col-xl-7">
+        <div class="loglens-card p-4">
+            <h2 class="h5 mb-3">Accounts</h2>
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead><tr><th>Username</th><th>Current role</th><th>Active</th></tr></thead>
+                    <tbody>
+                    {% for item in user_roles %}
+                        <tr>
+                            <td>{{ item.user.get_username }}</td>
+                            <td>{{ item.role }}</td>
+                            <td>{% if item.user.is_active %}Yes{% else %}No{% endif %}</td>
+                        </tr>
+                    {% empty %}
+                        <tr><td colspan="3" class="text-muted">No accounts found.</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

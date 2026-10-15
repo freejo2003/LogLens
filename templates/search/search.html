@@ -147,7 +147,7 @@ Search extracted log content using the configured matching algorithms.
                 </h2>
 
                 <p class="text-secondary small mb-0">
-                    LogLens uses literal substring matching.
+                    Literal substring matching with configurable case and Unicode normalization.
                 </p>
 
             </div>
@@ -172,9 +172,7 @@ Search extracted log content using the configured matching algorithms.
                             </div>
 
                             <div class="small text-secondary">
-                                The supplied pattern is searched as literal
-                                text rather than interpreted as a regular
-                                expression.
+                                Patterns are literal text. They are never interpreted as regular expressions.
                             </div>
 
                         </div>
@@ -299,6 +297,13 @@ Search extracted log content using the configured matching algorithms.
                     >
                         <i class="bi bi-shield-check me-2"></i>
                         Indicators
+                    </a>
+
+                    <a
+                        href="{% url 'search:history' %}"
+                        class="btn btn-outline-secondary text-start"
+                    >
+                        Search History
                     </a>
 
 

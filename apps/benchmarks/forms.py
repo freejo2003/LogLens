@@ -2,6 +2,7 @@ from django import forms
 
 from apps.ingestion.models import SourceFile
 from apps.workspaces.models import Workspace
+from apps.search.services.normalization import UNICODE_NORMALIZATION_CHOICES
 
 
 class BenchmarkRunForm(forms.Form):
@@ -27,6 +28,20 @@ class BenchmarkRunForm(forms.Form):
                 "autocomplete": "off",
             }
         ),
+    )
+
+    case_sensitive = forms.BooleanField(
+        label="Case-sensitive",
+        required=False,
+        initial=True,
+        widget=forms.CheckboxInput(attrs={"class": "form-check-input"}),
+    )
+    unicode_normalization = forms.ChoiceField(
+        label="Unicode normalization",
+        choices=UNICODE_NORMALIZATION_CHOICES,
+        initial="none",
+        required=False,
+        widget=forms.Select(attrs={"class": "form-select"}),
     )
 
     def __init__(self, *args, user=None, **kwargs):
@@ -60,6 +75,9 @@ class BenchmarkRunForm(forms.Form):
             )
 
         return pattern
+
+    def clean_unicode_normalization(self):
+        return self.cleaned_data.get("unicode_normalization") or "none"
 
     def clean(self):
         cleaned_data = super().clean()

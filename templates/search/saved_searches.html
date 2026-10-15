@@ -34,7 +34,9 @@ Manage reusable search configurations and check whether their source files have 
                     <th>Source File</th>
                     <th>Pattern</th>
                     <th>Algorithm</th>
+                    <th>Comparison</th>
                     <th>Source Status</th>
+                    <th>Actions</th>
                     <th>Created</th>
                 </tr>
             </thead>
@@ -78,6 +80,11 @@ Manage reusable search configurations and check whether their source files have 
                         </span>
                     </td>
 
+                    <td class="small">
+                        {% if saved_search.case_sensitive %}Case-sensitive{% else %}Case-insensitive{% endif %}<br>
+                        {{ saved_search.unicode_normalization }}
+                    </td>
+
                     <td>
                         {% if saved_search.source_status.status == "current" %}
                             <span class="badge text-bg-success">
@@ -96,6 +103,17 @@ Manage reusable search configurations and check whether their source files have 
                         <div class="small text-muted mt-1">
                             {{ saved_search.source_status.message }}
                         </div>
+                    </td>
+
+                    <td>
+                        {% if saved_search.source_status.status == "current" %}
+                        <form method="post" action="{% url 'search:saved-run' saved_search.id %}">
+                            {% csrf_token %}
+                            <button class="btn btn-sm btn-outline-primary" type="submit">Rerun</button>
+                        </form>
+                        {% else %}
+                        <span class="small text-muted">Source snapshot unavailable</span>
+                        {% endif %}
                     </td>
 
                     <td>

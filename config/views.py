@@ -1,64 +1,16 @@
-from django.contrib.auth.decorators import login_required
-from django.shortcuts import render
-
-from apps.ingestion.models import SourceFile
-from apps.search.models import IndicatorRule, SearchRun
-from apps.benchmarks.models import BenchmarkRun
+from django.db import connection
+from django.http import HttpResponse
+from django.views.decorators.http import require_GET
 
 
-@login_required
-def dashboard(request):
-    user = request.user
+@require_GET
+def health_check(request):
+    """Return readiness without exposing infrastructure details."""
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+            cursor.fetchone()
+    except Exception:
+        return HttpResponse("unavailable", status=503, content_type="text/plain")
 
-    source_files = SourceFile.objects.filter(owner=user)
-
-    total_files = source_files.count()
-
-    extracted_files = source_files.filter(
-        extraction_status=SourceFile.ExtractionStatus.SUCCEEDED
-    ).count()
-
-    pending_files = source_files.filter(
-        extraction_status=SourceFile.ExtractionStatus.PENDING
-    ).count()
-
-    failed_files = source_files.filter(
-        extraction_status=SourceFile.ExtractionStatus.FAILED
-    ).count()
-
-    total_searches = SearchRun.objects.filter(owner=user).count()
-
-    total_indicators = IndicatorRule.objects.filter(owner=user).count()
-
-    total_benchmarks = BenchmarkRun.objects.filter(owner=user).count()
-
-    recent_files = (
-        source_files
-        .select_related("workspace")
-        .order_by("-uploaded_at")[:5]
-    )
-
-    recent_searches = (
-        SearchRun.objects
-        .filter(owner=user)
-        .select_related("source_file")
-        .order_by("-created_at")[:5]
-    )
-
-    context = {
-        "total_files": total_files,
-        "extracted_files": extracted_files,
-        "pending_files": pending_files,
-        "failed_files": failed_files,
-        "total_searches": total_searches,
-        "total_indicators": total_indicators,
-        "total_benchmarks": total_benchmarks,
-        "recent_files": recent_files,
-        "recent_searches": recent_searches,
-    }
-
-    return render(
-        request,
-        "dashboard/index.html",
-        context,
-    )
+    return HttpResponse("ok", content_type="text/plain")

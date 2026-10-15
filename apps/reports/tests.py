@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.test import TestCase
+from django.urls import reverse
 
 from apps.benchmarks.models import AlgorithmMetric, BenchmarkRun
 from apps.reports.services import (
@@ -10,6 +11,9 @@ from apps.reports.services import (
     get_empirical_order,
 )
 from apps.workspaces.models import Workspace
+from apps.accounts.models import AuditEvent
+from apps.accounts.services import ANALYST_ROLE, assign_role
+from apps.benchmarks.services.benchmark_persistence import create_benchmark_run
 
 
 User = get_user_model()
@@ -27,6 +31,7 @@ class ReportAnalysisServiceTests(TestCase):
             description="Workspace used for report analysis tests.",
             owner=self.user,
         )
+        assign_role(self.user, ANALYST_ROLE)
 
     def create_benchmark(self):
         benchmark = BenchmarkRun.objects.create(
@@ -195,6 +200,37 @@ class ReportAnalysisServiceTests(TestCase):
             "kmp",
         )
 
+    def test_analysis_orders_algorithms_by_median_total_time(self):
+        benchmark = self.create_benchmark()
+        AlgorithmMetric.objects.filter(
+            benchmark_run=benchmark,
+            algorithm="naive",
+        ).update(
+            search_median_seconds=0.489113,
+            total_median_seconds=0.489126,
+        )
+        AlgorithmMetric.objects.filter(
+            benchmark_run=benchmark,
+            algorithm="kmp",
+        ).update(
+            search_median_seconds=0.012135,
+            total_median_seconds=0.012163,
+        )
+        AlgorithmMetric.objects.filter(
+            benchmark_run=benchmark,
+            algorithm="rabin_karp",
+        ).update(
+            search_median_seconds=0.026246,
+            total_median_seconds=0.026281,
+        )
+
+        analysis = build_benchmark_analysis(benchmark)
+
+        self.assertEqual(
+            [item.algorithm for item in analysis.algorithms],
+            ["kmp", "rabin_karp", "naive"],
+        )
+
     def test_slowest_algorithm(self):
         benchmark = self.create_benchmark()
 
@@ -277,3 +313,59 @@ class ReportAnalysisServiceTests(TestCase):
                 "rabin_karp",
             ],
         )
+
+
+class BenchmarkExportWorkflowTests(TestCase):
+    def setUp(self):
+        user_model = get_user_model()
+        self.user = user_model.objects.create_user(
+            username="benchmark-export-user",
+            password="test-password",
+        )
+        assign_role(self.user, ANALYST_ROLE)
+        self.workspace = Workspace.objects.create(name="Exports", owner=self.user)
+        self.benchmark = create_benchmark_run(
+            workspace=self.workspace,
+            owner=self.user,
+            text="ERROR ERROR",
+            pattern="ERROR",
+        )
+        self.client.force_login(self.user)
+
+    def test_benchmark_json_export_contains_methodology_and_memory(self):
+        response = self.client.get(
+            reverse("reports:export-json", args=[self.benchmark.pk])
+        )
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertTrue(payload["benchmark"]["python_version"])
+        self.assertEqual(len(payload["algorithms"]), 3)
+        self.assertTrue(all("peak_memory_bytes" in row for row in payload["algorithms"]))
+        self.assertTrue(
+            AuditEvent.objects.filter(
+                actor=self.user,
+                action=AuditEvent.Action.EXPORT_CREATED,
+                object_id=str(self.benchmark.pk),
+                details={"format": "json"},
+            ).exists()
+        )
+
+    def test_benchmark_csv_export_contains_three_algorithm_rows(self):
+        response = self.client.get(
+            reverse("reports:export-csv", args=[self.benchmark.pk])
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("peak_memory_bytes", response.content.decode("utf-8"))
+        self.assertEqual(response.content.decode("utf-8").count("\r\n"), 4)
+
+    def test_benchmark_exports_are_owner_scoped(self):
+        other_user = get_user_model().objects.create_user(
+            username="benchmark-export-other",
+            password="test-password",
+        )
+        assign_role(other_user, ANALYST_ROLE)
+        self.client.force_login(other_user)
+        response = self.client.get(
+            reverse("reports:export-json", args=[self.benchmark.pk])
+        )
+        self.assertEqual(response.status_code, 404)

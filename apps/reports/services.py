@@ -56,6 +56,7 @@ class AlgorithmAnalysis:
 
     verification_count: int
     collision_count: int
+    peak_memory_bytes: int | None
 
     @property
     def total_median_milliseconds(self) -> float:
@@ -247,6 +248,7 @@ def _metric_to_analysis(
 
         verification_count=metric.verification_count,
         collision_count=metric.collision_count,
+        peak_memory_bytes=metric.peak_memory_bytes,
     )
 
 
@@ -321,7 +323,7 @@ def build_benchmark_analysis(
             for algorithm in algorithms
         ),
 
-        algorithms=algorithms,
+        algorithms=get_empirical_order(algorithms),
     )
 
 

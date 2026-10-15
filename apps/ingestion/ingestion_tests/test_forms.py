@@ -1,7 +1,7 @@
 from io import BytesIO
 
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import TestCase
+from django.test import TestCase, override_settings
 
 from apps.ingestion.forms import SourceFileUploadForm
 from apps.ingestion.services.validators import MAX_FILE_SIZE
@@ -33,7 +33,7 @@ class SourceFileUploadFormTests(TestCase):
                 "workspace": self.workspace.id,
             },
             files={
-                "file": uploaded_file,
+                "files": uploaded_file,
             },
             user=self.user,
         )
@@ -48,6 +48,22 @@ class SourceFileUploadFormTests(TestCase):
         form = self._form(uploaded_file)
 
         self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(len(form.cleaned_data["files"]), 1)
+        self.assertEqual(form.cleaned_data["files"][0].loglens_encoding, "utf-8")
+
+    def test_multiple_valid_files_are_accepted_in_one_upload(self):
+        files = [
+            SimpleUploadedFile("first.log", b"INFO one\n", content_type="text/plain"),
+            SimpleUploadedFile("second.txt", b"INFO two\n", content_type="text/plain"),
+        ]
+        form = SourceFileUploadForm(
+            data={"workspace": self.workspace.id},
+            files={"files": files},
+            user=self.user,
+        )
+
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(len(form.cleaned_data["files"]), 2)
 
     def test_unsupported_extension_is_rejected(self):
         uploaded_file = SimpleUploadedFile(
@@ -58,8 +74,9 @@ class SourceFileUploadFormTests(TestCase):
 
         form = self._form(uploaded_file)
 
-        self.assertFalse(form.is_valid())
-        self.assertIn("file", form.errors)
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.cleaned_data["files"], [])
+        self.assertEqual(len(form.upload_errors), 1)
 
     def test_oversized_file_is_rejected(self):
         uploaded_file = SimpleUploadedFile(
@@ -72,8 +89,8 @@ class SourceFileUploadFormTests(TestCase):
 
         form = self._form(uploaded_file)
 
-        self.assertFalse(form.is_valid())
-        self.assertIn("file", form.errors)
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(len(form.upload_errors), 1)
 
     def test_invalid_pdf_signature_is_rejected(self):
         uploaded_file = SimpleUploadedFile(
@@ -84,8 +101,8 @@ class SourceFileUploadFormTests(TestCase):
 
         form = self._form(uploaded_file)
 
-        self.assertFalse(form.is_valid())
-        self.assertIn("file", form.errors)
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(len(form.upload_errors), 1)
 
     def test_invalid_docx_signature_is_rejected(self):
         uploaded_file = SimpleUploadedFile(
@@ -99,8 +116,8 @@ class SourceFileUploadFormTests(TestCase):
 
         form = self._form(uploaded_file)
 
-        self.assertFalse(form.is_valid())
-        self.assertIn("file", form.errors)
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(len(form.upload_errors), 1)
 
     def test_invalid_legacy_doc_signature_is_rejected(self):
         uploaded_file = SimpleUploadedFile(
@@ -111,17 +128,42 @@ class SourceFileUploadFormTests(TestCase):
 
         form = self._form(uploaded_file)
 
-        self.assertFalse(form.is_valid())
-        self.assertIn("file", form.errors)
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(len(form.upload_errors), 1)
 
     def test_invalid_utf8_text_is_rejected(self):
         uploaded_file = SimpleUploadedFile(
             "application.txt",
-            b"\xff\xfe\xfd\xfc",
+            b"\x00\x01\xff\xfe",
             content_type="text/plain",
         )
 
         form = self._form(uploaded_file)
 
-        self.assertFalse(form.is_valid())
-        self.assertIn("file", form.errors)
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(len(form.upload_errors), 1)
+
+    def test_windows_1252_text_is_accepted_and_recorded(self):
+        uploaded_file = SimpleUploadedFile(
+            "legacy.log",
+            "caf\u00e9 failure\n".encode("cp1252"),
+            content_type="text/plain",
+        )
+        form = self._form(uploaded_file)
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.cleaned_data["files"][0].loglens_encoding, "cp1252")
+
+    @override_settings(MAX_UPLOAD_BATCH_SIZE=10)
+    def test_total_batch_size_limit_is_enforced(self):
+        uploads = [
+            SimpleUploadedFile("one.log", b"123456", content_type="text/plain"),
+            SimpleUploadedFile("two.log", b"abcdef", content_type="text/plain"),
+        ]
+        form = SourceFileUploadForm(
+            data={"workspace": self.workspace.id},
+            files={"files": uploads},
+            user=self.user,
+        )
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(len(form.cleaned_data["files"]), 1)
+        self.assertEqual(len(form.upload_errors), 1)

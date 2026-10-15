@@ -1,6 +1,11 @@
+from django.db import transaction
+
+from apps.accounts.audit import record_event
+from apps.accounts.models import AuditEvent
 from apps.search.models import SavedSearch
 
 
+@transaction.atomic
 def create_saved_search(
     *,
     owner,
@@ -10,6 +15,8 @@ def create_saved_search(
     pattern,
     algorithm,
     description="",
+    case_sensitive=True,
+    unicode_normalization="none",
 ):
     if workspace.owner_id != owner.id:
         raise PermissionError(
@@ -32,7 +39,7 @@ def create_saved_search(
             "The selected source file has not been successfully extracted."
         )
 
-    return SavedSearch.objects.create(
+    saved_search = SavedSearch.objects.create(
         owner=owner,
         workspace=workspace,
         source_file=source_file,
@@ -40,8 +47,19 @@ def create_saved_search(
         name=name,
         pattern=pattern,
         algorithm=algorithm,
+        case_sensitive=case_sensitive,
+        unicode_normalization=unicode_normalization,
         description=description,
     )
+    record_event(
+        actor=owner,
+        workspace=workspace,
+        action=AuditEvent.Action.SAVED_SEARCH_CREATED,
+        object_type="SavedSearch",
+        object_id=saved_search.pk,
+        details={"algorithm": algorithm},
+    )
+    return saved_search
 
 
 def get_saved_searches_for_user(user):

@@ -27,6 +27,8 @@
                 <i class="bi bi-file-earmark-bar-graph me-2"></i>
                 View Analysis
             </a>
+            <a class="btn btn-outline-secondary" href="{% url 'reports:export-csv' benchmark.id %}">CSV</a>
+            <a class="btn btn-outline-secondary" href="{% url 'reports:export-json' benchmark.id %}">JSON</a>
         {% endif %}
     </div>
 </div>
@@ -128,8 +130,7 @@
                         {{ form.pattern }}
 
                         <div class="form-text loglens-muted">
-                            Matching is currently literal and
-                            case-sensitive.
+                            Literal substring matching; choose how case and Unicode are compared.
                         </div>
 
                         {% for error in form.pattern.errors %}
@@ -140,6 +141,20 @@
 
                         {% endfor %}
 
+                    </div>
+
+                    <div class="col-md-6">
+                        <label for="{{ form.case_sensitive.id_for_label }}" class="form-label">
+                            {{ form.case_sensitive.label }}
+                        </label>
+                        {{ form.case_sensitive }}
+                    </div>
+
+                    <div class="col-md-6">
+                        <label for="{{ form.unicode_normalization.id_for_label }}" class="form-label">
+                            {{ form.unicode_normalization.label }}
+                        </label>
+                        {{ form.unicode_normalization }}
                     </div>
 
 
@@ -253,6 +268,8 @@
 
                                 <th>Matches</th>
 
+                                <th>Peak Python memory (B)</th>
+
                                 <th>RK verifications</th>
 
                                 <th>RK collisions</th>
@@ -313,6 +330,8 @@
                                         {{ metric.match_count }}
                                     </td>
 
+                                    <td>{{ metric.peak_memory_bytes|default:"—" }}</td>
+
 
                                     <td>
 
@@ -350,7 +369,7 @@
                                 <tr>
 
                                     <td
-                                        colspan="8"
+                                        colspan="9"
                                         class="text-center loglens-muted"
                                     >
                                         No algorithm metrics were
@@ -372,7 +391,9 @@
 
                     Median timings are used as the primary comparison
                     statistic because the benchmark executes multiple
-                    measured trials.
+                    measured trials. Peak memory is Python-traced allocation
+                    during one additional un-timed search pass; it excludes
+                    input text and native allocations.
 
                 </div>
 

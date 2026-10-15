@@ -232,6 +232,8 @@ Theoretical and empirical comparison of Naive, KMP, and Rabin-Karp.
                                     Matches
                                 </th>
 
+                                <th>Peak Python memory (B)</th>
+
                                 <th>
                                     Rank
                                 </th>
@@ -283,6 +285,8 @@ Theoretical and empirical comparison of Naive, KMP, and Rabin-Karp.
                                 <td>
                                     {{ item.match_count }}
                                 </td>
+
+                                <td>{{ item.peak_memory_bytes|default:"—" }}</td>
 
 
                                 <td>
@@ -662,6 +666,20 @@ Theoretical and empirical comparison of Naive, KMP, and Rabin-Karp.
 
                 </div>
 
+            </div>
+
+            <div class="col-12 col-md-6 col-xl-3">
+                <div class="border rounded-3 p-3 h-100">
+                    <div class="small text-secondary mb-1">Python runtime</div>
+                    <div class="fw-semibold">{{ benchmark.python_version }}</div>
+                </div>
+            </div>
+
+            <div class="col-12 col-md-6 col-xl-3">
+                <div class="border rounded-3 p-3 h-100">
+                    <div class="small text-secondary mb-1">Platform</div>
+                    <div class="fw-semibold text-break">{{ benchmark.platform_name }}</div>
+                </div>
             </div>
 
 
