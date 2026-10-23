@@ -24,11 +24,13 @@ Manage reusable search configurations and check whether their source files have 
 </div>
 
 {% if saved_searches %}
+<form id="compare-saved-form" method="post" action="{% url 'search:saved-compare' %}">{% csrf_token %}</form>
 <div class="card loglens-card">
     <div class="table-responsive">
         <table class="table loglens-table align-middle mb-0">
             <thead>
                 <tr>
+                    <th>Compare</th>
                     <th>Name</th>
                     <th>Workspace</th>
                     <th>Source File</th>
@@ -44,6 +46,7 @@ Manage reusable search configurations and check whether their source files have 
             <tbody>
                 {% for saved_search in saved_searches %}
                 <tr>
+                    <td><input class="form-check-input" type="checkbox" form="compare-saved-form" name="saved_search_ids" value="{{ saved_search.pk }}" aria-label="Select {{ saved_search.name }} for comparison"></td>
                     <td>
                         <div class="fw-semibold">
                             {{ saved_search.name }}
@@ -127,6 +130,7 @@ Manage reusable search configurations and check whether their source files have 
         </table>
     </div>
 </div>
+<button class="btn btn-outline-primary mt-3" form="compare-saved-form" type="submit">Compare selected searches</button>
 {% else %}
 <div class="card loglens-card">
     <div class="card-body text-center py-5">

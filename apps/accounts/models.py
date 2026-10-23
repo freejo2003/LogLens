@@ -5,6 +5,7 @@ from django.db import models
 class AuditEvent(models.Model):
     class Action(models.TextChoices):
         WORKSPACE_CREATED = "workspace.created", "Workspace created"
+        WORKSPACE_SHARED = "workspace.shared", "Workspace shared"
         ROLE_ASSIGNED = "role.assigned", "Application role assigned"
         EXPORT_CREATED = "export.created", "Report or search export created"
         FILE_UPLOADED = "file.uploaded", "Source file uploaded"

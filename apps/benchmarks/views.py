@@ -49,6 +49,38 @@ def benchmark_workspace(request):
             benchmark.algorithm_metrics.all()
         )
 
+    fastest_search_seconds = max(
+        (metric.search_median_seconds for metric in metrics),
+        default=0,
+    )
+    comparison_rows = []
+    for rank, metric in enumerate(
+        sorted(metrics, key=lambda item: item.search_median_seconds),
+        start=1,
+    ):
+        comparison_rows.append(
+            {
+                "rank": rank,
+                "algorithm": metric.algorithm,
+                "display_name": {
+                    "naive": "Naive",
+                    "kmp": "KMP",
+                    "rabin_karp": "Rabin–Karp",
+                }.get(metric.algorithm, metric.algorithm),
+                "search_median_seconds": metric.search_median_seconds,
+                "bar_percent": (
+                    metric.search_median_seconds / fastest_search_seconds * 100
+                    if fastest_search_seconds > 0
+                    else 0
+                ),
+                "bar_color": {
+                    "naive": "bg-warning",
+                    "kmp": "bg-success",
+                    "rabin_karp": "bg-info",
+                }.get(metric.algorithm, "bg-primary"),
+            }
+        )
+
     return render(
         request,
         "benchmarks/benchmark.html",
@@ -56,5 +88,6 @@ def benchmark_workspace(request):
             "form": form,
             "benchmark": benchmark,
             "metrics": metrics,
+            "comparison_rows": comparison_rows,
         },
     )

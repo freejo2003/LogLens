@@ -1,11 +1,10 @@
-from pathlib import Path
-
 from django.conf import settings
 from pypdf import PdfReader
 
 from apps.ingestion.models import SourceFile, TextSegment
 from apps.ingestion.services.errors import ExtractionError, OCRNeededError
 from apps.ingestion.services.segment_writer import SegmentBatchWriter
+from pathlib import Path
 
 
 PDF_PARSER_NAME = "pypdf"

@@ -95,10 +95,20 @@ def upload_source_file(request):
         .select_related("workspace")
         .order_by("-uploaded_at")
     )
+    active_extractions = source_files.filter(
+        extraction_status__in=[
+            SourceFile.ExtractionStatus.PENDING,
+            SourceFile.ExtractionStatus.PROCESSING,
+        ]
+    ).count()
     return render(
         request,
         "ingestion/upload.html",
-        {"form": form, "source_files": source_files},
+        {
+            "form": form,
+            "source_files": source_files,
+            "active_extractions": active_extractions,
+        },
     )
 
 

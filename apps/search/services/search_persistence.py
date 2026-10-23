@@ -22,6 +22,8 @@ def create_search_run(
     indicator_rule=None,
     case_sensitive=True,
     unicode_normalization="none",
+    level_filter="",
+    saved_search=None,
 ):
     if workspace.owner_id != owner.id:
         raise PermissionError(
@@ -52,6 +54,7 @@ def create_search_run(
     search_run = SearchRun.objects.create(
         workspace=workspace,
         owner=owner,
+        saved_search=saved_search,
         source_file=source_file,
         indicator_rule=indicator_rule,
         indicator_name_snapshot=indicator_name_snapshot,
@@ -59,6 +62,7 @@ def create_search_run(
         algorithm=algorithm,
         case_sensitive=case_sensitive,
         unicode_normalization=unicode_normalization,
+        level_filter=level_filter,
         source_checksum=source_file.checksum,
         status=SearchRun.Status.SUCCEEDED,
     )
@@ -70,6 +74,7 @@ def create_search_run(
             algorithm=algorithm,
             case_sensitive=case_sensitive,
             unicode_normalization=unicode_normalization,
+            level_filter=level_filter,
         )
 
         with transaction.atomic():

@@ -11,6 +11,16 @@ LogLens is a Django application for privately ingesting log and document files, 
 - Bounds returned matches per search or benchmark to prevent repetitive input from creating unbounded result arrays.
 - Stores search history and reproducible benchmark runs with three warmups, ten measured trials, phase timings, medians, min/max spread, match agreement, Rabin–Karp diagnostics, runtime metadata, and Python-heap estimates.
 - Includes Admin, Analyst, and Reviewer application roles, minimized audit events, CSV/JSON exports, and HTML analysis reports.
+- Supports search batches across multiple extracted files and newline-separated patterns, with log-level filtering, per-pair progress, and cooperative cancellation between pairs.
+- Allows workspace owners to share search history and result access read-only with Reviewer accounts. Saved searches can be compared using their latest linked runs.
+
+## Search batches and sharing
+
+From **Search**, select one workspace and one or more extracted source files. Enter one literal pattern per line, choose the matching algorithm and optional log-level filter, then start the batch. The batch page refreshes progress and lets the owner request cancellation; the active file/pattern pair finishes before the worker stops. Results open individually from the batch table.
+
+From the dashboard, choose **Share** beside a workspace to grant a Reviewer read-only access to that workspace's search history, result pages, and exports. Sharing is recorded in the audit log. Analysts and owners retain write access; Reviewers cannot launch searches or manage the share.
+
+On **Saved Searches**, select two or more entries and choose **Compare selected searches**. The comparison shows each saved configuration and its latest linked run, including match count, elapsed time, and outcome. Rerun a saved search first if it has no linked run yet.
 
 ## Local development
 

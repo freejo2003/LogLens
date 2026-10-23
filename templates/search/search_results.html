@@ -28,6 +28,14 @@ Review matching log entries, source locations, and search metadata.
 
 {% else %}
 
+    <div class="d-flex flex-wrap justify-content-end gap-2 mb-3">
+        {% if search_run %}
+        <a href="{% url 'search:history-export-csv' search_run.id %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-filetype-csv me-1"></i>CSV</a>
+        <a href="{% url 'search:history-export-json' search_run.id %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-braces me-1"></i>JSON</a>
+        {% endif %}
+        <a href="{% url 'search:run' %}" class="btn btn-sm btn-primary"><i class="bi bi-search me-1"></i>New search</a>
+    </div>
+
     <!-- Search Summary -->
 
     <div class="loglens-card mb-4">
@@ -246,30 +254,30 @@ Review matching log entries, source locations, and search metadata.
 
             <div class="table-responsive">
 
-                <table class="table table-hover align-middle mb-0 loglens-table">
+                <table class="table table-hover align-middle mb-0 loglens-table results-table">
 
                     <thead>
 
                         <tr>
 
-                            <th class="ps-4">
+                            <th class="ps-4" scope="col">
                                 Segment
                             </th>
 
-                            <th>
+                            <th scope="col">
                                 Location
                             </th>
 
-                            <th>
+                            <th scope="col">
                                 Matches
                             </th>
 
-                            <th>
+                            <th scope="col">
                                 Positions
                             </th>
 
-                            <th>
-                                Extracted Text
+                            <th scope="col">
+                                Text around matches
                             </th>
 
                         </tr>
@@ -390,11 +398,11 @@ Review matching log entries, source locations, and search metadata.
                                 <td>
 
                                     <div
-                                        class="small text-break"
+                                        class="small text-break-anywhere"
                                         style="max-width: 700px;"
                                     >
                                         <pre
-                                            class="mb-0"
+                                            class="mb-0 text-break-anywhere"
                                             style="white-space: pre-wrap; font-family: inherit;"
                                         >{{ result.context_snippet }}</pre>
                                     </div>
@@ -647,11 +655,6 @@ Review matching log entries, source locations, and search metadata.
     <!-- Actions -->
 
     <div class="d-flex flex-wrap gap-2">
-
-        {% if search_run %}
-        <a href="{% url 'search:history-export-csv' search_run.id %}" class="btn btn-outline-secondary">Export CSV</a>
-        <a href="{% url 'search:history-export-json' search_run.id %}" class="btn btn-outline-secondary">Export JSON</a>
-        {% endif %}
 
         <a
             href="{% url 'search:run' %}"

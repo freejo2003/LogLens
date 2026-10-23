@@ -55,6 +55,9 @@ ALLOWED_HOSTS = [
     ).split(",")
     if host.strip()
 ]
+render_hostname = os.environ.get("RENDER_EXTERNAL_HOSTNAME", "").strip()
+if render_hostname and render_hostname not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append(render_hostname)
 if PRODUCTION and not ALLOWED_HOSTS:
     raise ValueError("DJANGO_ALLOWED_HOSTS must be set in production.")
 if PRODUCTION and "*" in ALLOWED_HOSTS:
@@ -65,6 +68,14 @@ CSRF_TRUSTED_ORIGINS = [
     for origin in os.environ.get("DJANGO_CSRF_TRUSTED_ORIGINS", "").split(",")
     if origin.strip()
 ]
+if render_hostname:
+    render_origin = f"https://{render_hostname}"
+    if render_origin not in CSRF_TRUSTED_ORIGINS:
+        CSRF_TRUSTED_ORIGINS.append(render_origin)
+if PRODUCTION and not CSRF_TRUSTED_ORIGINS:
+    raise ValueError(
+        "DJANGO_CSRF_TRUSTED_ORIGINS or RENDER_EXTERNAL_HOSTNAME must be set in production."
+    )
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -83,6 +94,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -143,7 +155,7 @@ STATIC_ROOT = Path(os.environ.get("DJANGO_STATIC_ROOT", BASE_DIR / "staticfiles"
 STORAGES = {
     "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
     "staticfiles": {
-        "BACKEND": "django.contrib.staticfiles.storage.ManifestStaticFilesStorage"
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"
     },
 }
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

@@ -27,6 +27,25 @@ class MultipleUploadViewTests(TestCase):
         response = client.post(reverse("ingestion:upload"), data={})
         self.assertEqual(response.status_code, 403)
 
+    def test_upload_page_reports_active_extraction_jobs_and_refreshes(self):
+        SourceFile.objects.create(
+            workspace=self.workspace,
+            owner=self.user,
+            original_name="queued.log",
+            storage_key="uploads/queued.log",
+            storage_path="uploads/queued.log",
+            extension=".log",
+            detected_type="text/plain",
+            byte_size=12,
+            checksum="a" * 64,
+            extraction_status=SourceFile.ExtractionStatus.PENDING,
+        )
+        response = self.client.get(reverse("ingestion:upload"))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["active_extractions"], 1)
+        self.assertContains(response, "extraction job")
+        self.assertContains(response, "window.location.reload()")
+
     @patch("apps.ingestion.views.enqueue_extraction")
     @patch("apps.ingestion.views.save_private_file")
     def test_multiple_uploads_create_owned_pending_sources_and_queue_them(

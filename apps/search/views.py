@@ -1,6 +1,8 @@
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db import IntegrityError
+from django.db import transaction
+from django.db.models import Q
 from django.core.paginator import Paginator
 from django.http import JsonResponse, StreamingHttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -19,7 +21,15 @@ from apps.search.forms import (
     SavedSearchForm,
     SearchRunForm,
 )
-from apps.search.models import ErrorGroup, IndicatorRule, SavedSearch, SearchRun
+from apps.search.models import (
+    ErrorGroup,
+    IndicatorRule,
+    SavedSearch,
+    SearchBatch,
+    SearchBatchItem,
+    SearchRun,
+)
+from apps.search.tasks import enqueue_search_batch
 from apps.search.services.indicators import (
     create_indicator_rule,
     get_indicator_rules_for_user,
@@ -34,6 +44,12 @@ from apps.search.services.saved_searches import (
 )
 from apps.search.services.normalization import normalize_search_text
 from apps.search.services.search_persistence import create_search_run
+
+
+def _visible_search_runs(user):
+    return SearchRun.objects.filter(
+        Q(owner=user) | Q(workspace__reviewer_shares__reviewer=user)
+    ).distinct()
 
 
 def _prepare_search_result_page(page, search_run):
@@ -77,32 +93,56 @@ def search_workspace(request):
         if is_reviewer(request.user):
             raise PermissionDenied
 
+        post_data = request.POST.copy()
+        legacy_single = "source_files" not in post_data and bool(post_data.get("source_file"))
+        if legacy_single:
+            post_data.setlist("source_files", [post_data.get("source_file")])
         form = SearchRunForm(
-            request.POST,
+            post_data,
             user=request.user,
         )
 
         if form.is_valid():
             workspace = form.cleaned_data["workspace"]
-            source_file = form.cleaned_data["source_file"]
-            pattern = form.cleaned_data["pattern"]
+            source_files = form.cleaned_data["source_files"]
+            patterns = form.cleaned_data["pattern"]
             indicator_rule = form.cleaned_data["indicator_rule"]
             algorithm = form.cleaned_data["algorithm"]
             case_sensitive = form.cleaned_data["case_sensitive"]
             unicode_normalization = form.cleaned_data["unicode_normalization"]
 
             try:
-                search_run = create_search_run(
-                    workspace=workspace,
-                    owner=request.user,
-                    source_file=source_file,
-                    pattern=pattern,
-                    algorithm=algorithm,
-                    indicator_rule=indicator_rule,
-                    case_sensitive=case_sensitive,
-                    unicode_normalization=unicode_normalization,
-                )
-                return redirect("search:history-detail", run_id=search_run.pk)
+                if (
+                    legacy_single
+                    and len(source_files) == 1
+                    and (len(patterns) == 1 or indicator_rule is not None)
+                ):
+                    search_run = create_search_run(
+                        workspace=workspace, owner=request.user, source_file=source_files[0],
+                        pattern=patterns[0] if patterns else "", algorithm=algorithm, indicator_rule=indicator_rule,
+                        case_sensitive=case_sensitive,
+                        unicode_normalization=unicode_normalization,
+                        level_filter=form.cleaned_data["level_filter"],
+                    )
+                    return redirect("search:history-detail", run_id=search_run.pk)
+                if indicator_rule is not None:
+                    patterns = [indicator_rule.pattern]
+                with transaction.atomic():
+                    batch = SearchBatch.objects.create(
+                        workspace=workspace,
+                        owner=request.user,
+                        algorithm=algorithm,
+                        case_sensitive=case_sensitive,
+                        unicode_normalization=unicode_normalization,
+                        level_filter=form.cleaned_data["level_filter"],
+                        total_items=len(source_files) * len(patterns),
+                    )
+                    SearchBatchItem.objects.bulk_create([
+                        SearchBatchItem(batch=batch, source_file=source_file, pattern=pattern)
+                        for source_file in source_files for pattern in patterns
+                    ])
+                enqueue_search_batch(batch.pk)
+                return redirect("search:batch-detail", batch_id=batch.pk)
 
             except (PermissionError, ValueError) as exc:
                 form.add_error(
@@ -135,7 +175,7 @@ def search_workspace(request):
             "indicator_rules": get_indicator_rules_for_user(
                 request.user
             ),
-            "search_history": SearchRun.objects.filter(owner=request.user)
+            "search_history": _visible_search_runs(request.user)
             .select_related("workspace", "source_file")[:10],
         },
     )
@@ -143,9 +183,27 @@ def search_workspace(request):
 
 @login_required
 @reviewer_required
+def search_batch_detail(request, batch_id):
+    batch = get_object_or_404(SearchBatch.objects.prefetch_related("items__source_file", "items__search_run"), pk=batch_id, owner=request.user)
+    return render(request, "search/batch_detail.html", {"batch": batch})
+
+
+@login_required
+@analyst_required
+@require_POST
+def cancel_search_batch(request, batch_id):
+    batch = get_object_or_404(SearchBatch, pk=batch_id, owner=request.user)
+    if batch.status in {SearchBatch.Status.QUEUED, SearchBatch.Status.RUNNING}:
+        SearchBatch.objects.filter(pk=batch.pk).update(status=SearchBatch.Status.CANCEL_REQUESTED)
+        messages.info(request, "Cancellation requested. The current file/pattern pair will finish before the batch stops.")
+    return redirect("search:batch-detail", batch_id=batch.pk)
+
+
+@login_required
+@reviewer_required
 def search_history(request):
     search_runs = (
-        SearchRun.objects.filter(owner=request.user)
+        _visible_search_runs(request.user)
         .select_related("workspace", "source_file")[:100]
     )
     return render(request, "search/history.html", {"search_runs": search_runs})
@@ -155,11 +213,10 @@ def search_history(request):
 @reviewer_required
 def search_run_detail(request, run_id):
     search_run = get_object_or_404(
-        SearchRun.objects.select_related("workspace", "source_file", "indicator_rule").prefetch_related(
+        _visible_search_runs(request.user).select_related("workspace", "source_file", "indicator_rule").prefetch_related(
             "match_results__segment", "match_results__source_file"
         ),
         pk=run_id,
-        owner=request.user,
     )
     match_results = Paginator(
         search_run.match_results.select_related("segment", "source_file").order_by("segment__sequence"),
@@ -167,7 +224,7 @@ def search_run_detail(request, run_id):
     ).get_page(request.GET.get("page"))
     _prepare_search_result_page(match_results, search_run)
     saved_search_form = None
-    if search_run.status == SearchRun.Status.SUCCEEDED and search_run.source_file_id:
+    if search_run.owner_id == request.user.pk and search_run.status == SearchRun.Status.SUCCEEDED and search_run.source_file_id:
         saved_search_form = SavedSearchForm(
             user=request.user,
             initial={
@@ -214,6 +271,7 @@ def run_saved_search(request, saved_search_id):
             algorithm=saved_search.algorithm,
             case_sensitive=saved_search.case_sensitive,
             unicode_normalization=saved_search.unicode_normalization,
+            saved_search=saved_search,
         )
     except (PermissionError, ValueError):
         messages.error(request, "The saved search could not be rerun. Check that its source is available and try again.")
@@ -239,7 +297,7 @@ def _spreadsheet_safe(value):
 def export_search_csv(request, run_id):
     import csv
 
-    search_run = get_object_or_404(SearchRun, pk=run_id, owner=request.user)
+    search_run = get_object_or_404(_visible_search_runs(request.user), pk=run_id)
     record_event(
         actor=request.user,
         workspace=search_run.workspace,
@@ -287,7 +345,7 @@ def export_search_csv(request, run_id):
 @login_required
 @reviewer_required
 def export_search_json(request, run_id):
-    search_run = get_object_or_404(SearchRun, pk=run_id, owner=request.user)
+    search_run = get_object_or_404(_visible_search_runs(request.user), pk=run_id)
     record_event(
         actor=request.user,
         workspace=search_run.workspace,
@@ -349,6 +407,25 @@ def saved_searches_workspace(request):
             "saved_searches": saved_searches,
         },
     )
+
+
+@login_required
+@reviewer_required
+def compare_saved_searches(request):
+    saved_searches = get_saved_searches_for_user(request.user)
+    comparisons = []
+    if request.method == "POST":
+        ids = request.POST.getlist("saved_search_ids")
+        selected = list(saved_searches.filter(pk__in=ids))
+        if len(selected) < 2:
+            messages.error(request, "Select at least two saved searches to compare.")
+        else:
+            latest = {}
+            runs = SearchRun.objects.filter(owner=request.user, saved_search__in=selected).select_related("source_file").order_by("-created_at")
+            for run in runs:
+                latest.setdefault(run.saved_search_id, run)
+            comparisons = [{"saved": saved, "run": latest.get(saved.pk)} for saved in selected]
+    return render(request, "search/compare_saved.html", {"saved_searches": saved_searches, "comparisons": comparisons})
 
 
 @login_required

@@ -387,6 +387,61 @@
                 </div>
 
 
+                <section
+                    class="mt-4"
+                    aria-labelledby="benchmark-search-graph-heading"
+                >
+
+                    <div class="d-flex justify-content-between align-items-end flex-wrap gap-2 mb-3">
+                        <div>
+                            <h4
+                                id="benchmark-search-graph-heading"
+                                class="h6 mb-1"
+                            >
+                                Median search time by algorithm
+                            </h4>
+                            <p class="small text-secondary mb-0">
+                                Shorter bars are faster. Bar lengths are scaled to the slowest algorithm.
+                            </p>
+                        </div>
+                        <span class="small text-secondary">Lower is better</span>
+                    </div>
+
+                    {% for row in comparison_rows %}
+                        <div class="benchmark-chart-row mb-3">
+                            <div>
+                                <span class="fw-semibold">{{ row.display_name }}</span>
+                                <span class="small text-secondary">Rank {{ row.rank }}</span>
+                                {% if row.rank == 1 %}<span class="badge text-bg-success ms-1">Fastest</span>{% endif %}
+                            </div>
+                            <div class="benchmark-chart-track">
+                                <div
+                                    class="progress"
+                                    role="progressbar"
+                                    aria-label="{{ row.display_name }} median search time"
+                                    aria-valuemin="0"
+                                    aria-valuemax="100"
+                                    aria-valuenow="{{ row.bar_percent|floatformat:0 }}"
+                                    aria-valuetext="{{ row.search_median_seconds|floatformat:8 }} seconds"
+                                    style="height: 1.25rem;"
+                                >
+                                    <div
+                                        class="progress-bar {{ row.bar_color }}"
+                                        style="width: {{ row.bar_percent }}%;"
+                                    ></div>
+                                </div>
+                            </div>
+                            <div class="text-end text-nowrap">
+                                <code>{{ row.search_median_seconds|floatformat:8 }} s</code>
+                            </div>
+                        </div>
+                    {% empty %}
+                        <p class="text-secondary mb-0">No benchmark timings are available.</p>
+                    {% endfor %}
+
+                </section>
+
+
                 <div class="small text-secondary">
 
                     Median timings are used as the primary comparison

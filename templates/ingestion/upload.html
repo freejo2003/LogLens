@@ -80,6 +80,7 @@ Upload, inspect, and manage private source files
                 <form
                     method="post"
                     enctype="multipart/form-data"
+                    id="uploadForm"
                 >
 
                     {% csrf_token %}
@@ -143,6 +144,10 @@ Upload, inspect, and manage private source files
 
                                     {{ form.files }}
 
+                                    <div id="fileSelectionFeedback" class="form-text mt-2" aria-live="polite">
+                                        No files selected yet.
+                                    </div>
+
                                     <div class="form-text mt-2">
                                         Select up to 10 files. Each file may be up to 25 MB.
                                     </div>
@@ -187,11 +192,11 @@ Upload, inspect, and manage private source files
                         <button
                             type="submit"
                             class="btn btn-primary px-4"
+                            id="uploadSubmitButton"
                         >
 
-                            <i class="bi bi-upload me-2"></i>
-
-                            Upload Files
+                            <span class="upload-button-label"><i class="bi bi-upload me-2"></i>Upload Files</span>
+                            <span class="upload-button-wait d-none"><span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Uploading…</span>
 
                         </button>
 
@@ -395,6 +400,13 @@ Upload, inspect, and manage private source files
      SOURCE FILE LIBRARY
      ========================================================= -->
 
+{% if active_extractions %}
+<div class="alert alert-info d-flex align-items-center justify-content-between flex-wrap gap-2" role="status" aria-live="polite">
+    <span class="status-live"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span><strong>{{ active_extractions }} extraction job{{ active_extractions|pluralize }}</strong> queued or processing.</span>
+    <span class="small">This list refreshes while jobs are active.</span>
+</div>
+{% endif %}
+
 <div class="loglens-card">
 
     <div class="p-4 border-bottom">
@@ -595,15 +607,11 @@ Upload, inspect, and manage private source files
 
                                     {% elif file.extraction_status == "pending" %}
 
-                                        <span class="badge text-bg-warning">
-                                            Pending
-                                        </span>
+                                        <span class="status-live badge text-bg-warning" role="status"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span>Queued</span>
 
                                     {% elif file.extraction_status == "processing" %}
 
-                                        <span class="badge text-bg-info">
-                                            Processing
-                                        </span>
+                                        <span class="status-live badge text-bg-info" role="status"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span>Processing</span>
 
                                     {% elif file.extraction_status == "failed" %}
 
@@ -756,4 +764,38 @@ Upload, inspect, and manage private source files
 </div>
 
 
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(() => {
+    const input = document.getElementById("id_files");
+    const feedback = document.getElementById("fileSelectionFeedback");
+    const form = document.getElementById("uploadForm");
+    const submit = document.getElementById("uploadSubmitButton");
+    if (input && feedback) {
+        input.addEventListener("change", () => {
+            const files = Array.from(input.files || []);
+            const bytes = files.reduce((total, file) => total + file.size, 0);
+            const size = bytes < 1024 * 1024
+                ? `${(bytes / 1024).toFixed(0)} KB`
+                : `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+            feedback.textContent = files.length
+                ? `${files.length} file${files.length === 1 ? "" : "s"} selected · ${size} total`
+                : "No files selected yet.";
+        });
+    }
+    if (form && submit) {
+        form.addEventListener("submit", () => {
+            if (!form.reportValidity()) return;
+            submit.disabled = true;
+            submit.querySelector(".upload-button-label")?.classList.add("d-none");
+            submit.querySelector(".upload-button-wait")?.classList.remove("d-none");
+        });
+    }
+})();
+{% if active_extractions %}
+window.setTimeout(() => window.location.reload(), 5000);
+{% endif %}
+</script>
 {% endblock %}

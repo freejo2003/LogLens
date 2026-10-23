@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Search Batch · LogLens{% endblock %}
+{% block page_title %}Search Batch{% endblock %}
+{% block page_subtitle %}Track multi-file, multi-pattern search and open each completed result.{% endblock %}
+{% block content %}
+<section class="card loglens-card mb-4" aria-labelledby="batch-progress-title">
+    <div class="card-body p-4">
+        <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+            <div>
+                <h2 id="batch-progress-title" class="h5 mb-1">
+                    {% if batch.status == "succeeded" %}<i class="bi bi-check-circle-fill text-success me-1"></i>{% elif batch.status == "failed" %}<i class="bi bi-exclamation-circle-fill text-danger me-1"></i>{% elif batch.status == "cancelled" %}<i class="bi bi-slash-circle text-secondary me-1"></i>{% else %}<span class="spinner-border spinner-border-sm text-primary me-2" aria-hidden="true"></span>{% endif %}
+                    {{ batch.get_status_display }}
+                </h2>
+                <p class="text-secondary mb-0">{{ batch.get_algorithm_display|default:batch.algorithm }} · {{ batch.completed_items }} of {{ batch.total_items }} combinations complete</p>
+            </div>
+            {% if batch.status == "queued" or batch.status == "running" %}
+            <form method="post" action="{% url 'search:batch-cancel' batch.pk %}">
+                {% csrf_token %}
+                <button class="btn btn-outline-danger" type="submit"><i class="bi bi-stop-circle me-1"></i>Request cancellation</button>
+            </form>
+            {% elif batch.status == "cancel_requested" %}
+            <span class="badge text-bg-warning">Stopping after current combination</span>
+            {% endif %}
+        </div>
+        <div class="progress" role="progressbar" aria-label="Search batch progress" aria-valuemin="0" aria-valuemax="{{ batch.total_items }}" aria-valuenow="{{ batch.completed_items }}" aria-valuetext="{{ batch.completed_items }} of {{ batch.total_items }} complete">
+            <div class="progress-bar {% if batch.status == 'failed' %}bg-danger{% elif batch.status == 'cancelled' %}bg-secondary{% else %}bg-primary{% endif %}" style="width: {% widthratio batch.completed_items batch.total_items 100 %}%"></div>
+        </div>
+        <div class="row g-2 mt-3 small text-secondary">
+            <div class="col-6 col-md-3"><span class="d-block fw-semibold text-dark">Workspace</span>{{ batch.workspace.name }}</div>
+            <div class="col-6 col-md-3"><span class="d-block fw-semibold text-dark">Level filter</span>{{ batch.level_filter|default:"All levels" }}</div>
+            <div class="col-6 col-md-3"><span class="d-block fw-semibold text-dark">Case matching</span>{% if batch.case_sensitive %}Sensitive{% else %}Insensitive{% endif %}</div>
+            <div class="col-6 col-md-3"><span class="d-block fw-semibold text-dark">Unicode</span>{{ batch.unicode_normalization }}</div>
+        </div>
+    </div>
+</section>
+
+<section class="card loglens-card" aria-labelledby="batch-items-title">
+    <div class="card-header bg-white border-0 p-4 pb-0"><h2 class="h5 mb-1" id="batch-items-title">File and pattern results</h2><p class="small text-secondary mb-0">Each row is one independent search. Completed rows link to their result details.</p></div>
+    <div class="table-responsive p-3">
+        <table class="table loglens-table table-hover align-middle mb-0">
+            <thead><tr><th scope="col">File</th><th scope="col">Pattern</th><th scope="col">Status</th><th scope="col">Matches</th><th scope="col"><span class="visually-hidden">Action</span></th></tr></thead>
+            <tbody>
+                {% for item in batch.items.all %}
+                <tr>
+                    <td class="text-break-anywhere">{{ item.source_file.original_name }}</td>
+                    <td><code class="text-break-anywhere">{{ item.pattern }}</code></td>
+                    <td>{% if item.status == "running" %}<span class="status-live text-primary"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span>{{ item.get_status_display }}</span>{% elif item.status == "succeeded" %}<span class="badge text-bg-success">{{ item.get_status_display }}</span>{% elif item.status == "failed" %}<span class="badge text-bg-danger">{{ item.get_status_display }}</span>{% elif item.status == "cancelled" %}<span class="badge text-bg-secondary">{{ item.get_status_display }}</span>{% else %}<span class="badge text-bg-light border text-secondary">{{ item.get_status_display }}</span>{% endif %}</td>
+                    <td>{% if item.search_run %}{{ item.search_run.total_match_count }}{% else %}<span class="text-secondary">—</span>{% endif %}</td>
+                    <td class="text-end">{% if item.search_run %}<a class="btn btn-sm btn-outline-primary" href="{% url 'search:history-detail' item.search_run.pk %}">Open results</a>{% endif %}</td>
+                </tr>
+                {% empty %}<tr><td colspan="5" class="text-center text-secondary py-4">No search items were created.</td></tr>{% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% if batch.status == "queued" or batch.status == "running" or batch.status == "cancel_requested" %}
+<p class="small text-secondary mt-3" role="status" aria-live="polite">This page refreshes automatically while the batch is active.</p>
+<script>window.setTimeout(() => window.location.reload(), 3000);</script>
+{% endif %}
+{% endblock %}

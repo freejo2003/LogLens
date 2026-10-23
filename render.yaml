@@ -1,0 +1,73 @@
+services:
+  - type: web
+    name: loglens-web
+    runtime: docker
+    plan: free
+    region: oregon
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    dockerCommand: >-
+      /bin/sh -c "python manage.py migrate --noinput &&
+      python manage.py collectstatic --noinput &&
+      exec gunicorn config.wsgi:application --bind 0.0.0.0:${PORT:-10000}
+      --workers 1 --timeout 60 --access-logfile - --error-logfile -"
+    healthCheckPath: /health/
+    autoDeploy: true
+    envVars:
+      - key: DJANGO_ENV
+        value: production
+      - key: DJANGO_DEBUG
+        value: "false"
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: DJANGO_SECURE_SSL_REDIRECT
+        value: "true"
+      - key: DJANGO_SECURE_HSTS_SECONDS
+        value: "31536000"
+      - key: DJANGO_HSTS_INCLUDE_SUBDOMAINS
+        value: "false"
+      - key: DJANGO_HSTS_PRELOAD
+        value: "false"
+      - key: CELERY_TASK_ALWAYS_EAGER
+        value: "true"
+      - key: CELERY_TASK_EAGER_PROPAGATES
+        value: "true"
+      - key: POSTGRES_DB
+        fromDatabase:
+          name: loglens-db
+          property: database
+      - key: POSTGRES_USER
+        fromDatabase:
+          name: loglens-db
+          property: user
+      - key: POSTGRES_PASSWORD
+        fromDatabase:
+          name: loglens-db
+          property: password
+      - key: POSTGRES_HOST
+        fromDatabase:
+          name: loglens-db
+          property: host
+      - key: POSTGRES_PORT
+        fromDatabase:
+          name: loglens-db
+          property: port
+      - key: POSTGRES_CONN_MAX_AGE
+        value: "60"
+      - key: LOG_LEVEL
+        value: INFO
+      - key: LOGLENS_MAX_UPLOAD_SIZE
+        value: "26214400"
+      - key: LOGLENS_MAX_UPLOAD_BATCH_SIZE
+        value: "52428800"
+      - key: LOGLENS_MAX_UPLOAD_COUNT
+        value: "10"
+
+databases:
+  - name: loglens-db
+    plan: free
+    region: oregon
+    databaseName: loglens
+    user: loglens
+    postgresMajorVersion: "18"
+    ipAllowList: []

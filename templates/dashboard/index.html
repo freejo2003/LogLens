@@ -489,6 +489,10 @@ Overview of your LogLens files, searches, and algorithm benchmarks.
 </div>
 
 
+{% if workspaces %}
+<div class="card loglens-card mb-4"><div class="card-body"><h2 class="h5">Workspace access</h2><p class="text-secondary small">Share workspace search history with a Reviewer.</p><div class="d-flex flex-wrap gap-2">{% for workspace in workspaces %}<a class="btn btn-sm btn-outline-secondary" href="{% url 'workspace-share' workspace.pk %}">Share {{ workspace.name }}</a>{% endfor %}</div></div></div>
+{% endif %}
+
 <!-- Recent Files -->
 
 <div class="loglens-card mb-4">

@@ -1,11 +1,10 @@
-from pathlib import Path
-
 from docx import Document
 
 from apps.ingestion.models import SourceFile, TextSegment
 from apps.ingestion.services.errors import ExtractionError
 from apps.ingestion.services.segment_writer import SegmentBatchWriter
 from apps.ingestion.services.validators import _validate_docx_archive
+from pathlib import Path
 
 
 DOCX_PARSER_NAME = "python-docx"

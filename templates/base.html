@@ -190,6 +190,12 @@
             background-color: var(--loglens-sidebar-active);
         }
 
+        .sidebar .nav-link:focus-visible,
+        .sidebar-toggle:focus-visible {
+            outline: 3px solid #9ec5fe;
+            outline-offset: 2px;
+        }
+
         .sidebar .nav-link i {
             width: 22px;
 
@@ -225,6 +231,17 @@
 
             display: flex;
             flex-direction: column;
+        }
+
+        .login-main-wrapper {
+            margin-left: 0;
+        }
+
+        .login-main-wrapper .content {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
         }
 
 
@@ -271,6 +288,10 @@
         .topbar-username {
             color: var(--loglens-muted);
             font-size: 0.875rem;
+            max-width: 18rem;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
 
 
@@ -335,6 +356,34 @@
 
         .loglens-muted {
             color: var(--loglens-muted);
+        }
+
+        .text-break-anywhere {
+            overflow-wrap: anywhere;
+            word-break: normal;
+        }
+
+        .status-live {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .results-table {
+            min-width: 860px;
+        }
+
+        .benchmark-chart-row {
+            display: grid;
+            grid-template-columns: minmax(8rem, 0.8fr) minmax(8rem, 2fr) minmax(7rem, auto);
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .benchmark-report-chart-row {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr);
+            gap: 0.5rem;
         }
 
 
@@ -527,7 +576,8 @@
             }
 
             .topbar-username {
-                display: none;
+                max-width: 6rem;
+                font-size: 0.75rem;
             }
 
             .content {
@@ -537,6 +587,20 @@
 
             .page-header h1 {
                 font-size: 1.5rem;
+            }
+
+            .benchmark-chart-row {
+                grid-template-columns: minmax(0, 1fr) auto;
+                gap: 0.45rem 0.75rem;
+            }
+
+            .benchmark-chart-row .benchmark-chart-track {
+                grid-column: 1 / -1;
+                grid-row: 2;
+            }
+
+            .content .table-responsive {
+                border-radius: 0 0 var(--loglens-radius) var(--loglens-radius);
             }
 
         }
@@ -553,7 +617,8 @@
          SIDEBAR
          ========================================================= -->
 
-    <aside class="sidebar">
+    {% if request.resolver_match.view_name != "accounts:login" %}
+    <aside class="sidebar" id="loglensSidebar" aria-label="Primary navigation">
 
         <a href="{% url 'dashboard' %}" class="sidebar-brand" aria-label="LogLens Dashboard">
 
@@ -569,7 +634,7 @@
             <!-- Dashboard -->
 
             <a href="{% url 'dashboard' %}"
-                class="nav-link{% if request.resolver_match.url_name == 'dashboard' %} active{% endif %}">
+                class="nav-link{% if request.resolver_match.url_name == 'dashboard' %} active{% endif %}"{% if request.resolver_match.url_name == 'dashboard' %} aria-current="page"{% endif %}>
                 <i class="bi bi-grid-1x2"></i>
                 <span>Dashboard</span>
             </a>
@@ -591,7 +656,7 @@
             <!-- Files -->
 
             <a href="{% url 'ingestion:upload' %}"
-                class="nav-link{% if request.resolver_match.app_name == 'ingestion' %} active{% endif %}">
+                class="nav-link{% if request.resolver_match.app_name == 'ingestion' %} active{% endif %}"{% if request.resolver_match.app_name == 'ingestion' %} aria-current="page"{% endif %}>
                 <i class="bi bi-file-earmark-arrow-up"></i>
                 <span>Files</span>
             </a>
@@ -600,23 +665,21 @@
             <!-- Search -->
 
             <a href="{% url 'search:run' %}"
-                class="nav-link{% if request.resolver_match.app_name == 'search' and request.resolver_match.url_name == 'run' %} active{% endif %}">
+                class="nav-link{% if request.resolver_match.app_name == 'search' and request.resolver_match.url_name != 'saved' and request.resolver_match.url_name != 'saved-run' and request.resolver_match.url_name != 'saved-compare' and request.resolver_match.url_name != 'error-groups' and request.resolver_match.url_name != 'indicators' and request.resolver_match.url_name != 'indicator-create' and request.resolver_match.url_name != 'indicator-edit' %} active{% endif %}"{% if request.resolver_match.app_name == 'search' and request.resolver_match.url_name != 'saved' and request.resolver_match.url_name != 'saved-run' and request.resolver_match.url_name != 'saved-compare' and request.resolver_match.url_name != 'error-groups' and request.resolver_match.url_name != 'indicators' and request.resolver_match.url_name != 'indicator-create' and request.resolver_match.url_name != 'indicator-edit' %} aria-current="page"{% endif %}>
                 <i class="bi bi-search"></i>
                 <span>Search</span>
             </a>
-            <a
-    href="{% url 'search:saved' %}"
-    class="nav-link {% if request.resolver_match.url_name == 'saved' %}active{% endif %}"
->
-    <i class="bi bi-bookmark me-2"></i>
-    Saved Searches
-</a>
+            <a href="{% url 'search:saved' %}"
+               class="nav-link{% if request.resolver_match.url_name == 'saved' or request.resolver_match.url_name == 'saved-run' or request.resolver_match.url_name == 'saved-compare' %} active{% endif %}"{% if request.resolver_match.url_name == 'saved' or request.resolver_match.url_name == 'saved-run' or request.resolver_match.url_name == 'saved-compare' %} aria-current="page"{% endif %}>
+                <i class="bi bi-bookmark"></i>
+                <span>Saved Searches</span>
+            </a>
 
 
             <!-- Error Groups -->
 
             <a href="{% url 'search:error-groups' %}"
-                class="nav-link{% if request.resolver_match.app_name == 'search' and request.resolver_match.url_name == 'error-groups' %} active{% endif %}">
+                class="nav-link{% if request.resolver_match.app_name == 'search' and request.resolver_match.url_name == 'error-groups' %} active{% endif %}"{% if request.resolver_match.app_name == 'search' and request.resolver_match.url_name == 'error-groups' %} aria-current="page"{% endif %}>
                 <i class="bi bi-exclamation-triangle"></i>
                 <span>Error Groups</span>
             </a>
@@ -625,7 +688,7 @@
             <!-- Indicators -->
 
             <a href="{% url 'search:indicators' %}"
-                class="nav-link{% if request.resolver_match.app_name == 'search' and request.resolver_match.url_name == 'indicators' %} active{% endif %}">
+                class="nav-link{% if request.resolver_match.app_name == 'search' and request.resolver_match.url_name == 'indicators' or request.resolver_match.url_name == 'indicator-edit' or request.resolver_match.url_name == 'indicator-create' %} active{% endif %}"{% if request.resolver_match.app_name == 'search' and request.resolver_match.url_name == 'indicators' or request.resolver_match.url_name == 'indicator-edit' or request.resolver_match.url_name == 'indicator-create' %} aria-current="page"{% endif %}>
                 <i class="bi bi-shield-check"></i>
                 <span>Indicators</span>
             </a>
@@ -639,21 +702,11 @@
             <!-- Benchmarks -->
 
             <a href="{% url 'benchmarks:run' %}"
-                class="nav-link{% if request.resolver_match.app_name == 'benchmarks' %} active{% endif %}">
+                class="nav-link{% if request.resolver_match.app_name == 'benchmarks' or request.resolver_match.app_name == 'reports' %} active{% endif %}"{% if request.resolver_match.app_name == 'benchmarks' or request.resolver_match.app_name == 'reports' %} aria-current="page"{% endif %}>
                 <i class="bi bi-speedometer2"></i>
                 <span>Benchmarks</span>
             </a>
 
-
-            <!-- Reports currently has no index route.
-                 Keep it visible but disabled until the reports
-                 index/list view is implemented. -->
-
-            <span class="nav-link disabled" aria-disabled="true"
-                title="Reports index will be available after report listing is implemented.">
-                <i class="bi bi-file-earmark-bar-graph"></i>
-                <span>Reports</span>
-            </span>
 
         </nav>
 
@@ -663,19 +716,21 @@
     <!-- Mobile overlay -->
 
     <div class="sidebar-overlay" id="sidebarOverlay" aria-hidden="true"></div>
+    {% endif %}
 
 
     <!-- =========================================================
          MAIN APPLICATION
          ========================================================= -->
 
-    <div class="main-wrapper">
+    <div class="main-wrapper{% if request.resolver_match.view_name == "accounts:login" %} login-main-wrapper{% endif %}">
 
 
         <!-- =====================================================
              TOPBAR
              ===================================================== -->
 
+        {% if request.resolver_match.view_name != "accounts:login" %}
         <header class="topbar">
 
             <div class="d-flex align-items-center gap-2">
@@ -711,6 +766,7 @@
             </div>
 
         </header>
+        {% endif %}
 
 
         <!-- =====================================================
@@ -719,6 +775,7 @@
 
         <main class="content">
 
+            {% block page_header %}
             <div class="page-header">
 
                 <h1>
@@ -734,6 +791,7 @@
                 {% endblock %}
 
             </div>
+            {% endblock %}
 
 
             <!-- Django messages -->
@@ -802,6 +860,7 @@
                     "aria-expanded",
                     "false"
                 );
+                toggle.setAttribute("aria-label", "Open navigation");
 
             }
 
@@ -813,6 +872,7 @@
                     "aria-expanded",
                     "true"
                 );
+                toggle.setAttribute("aria-label", "Close navigation");
 
             }
 

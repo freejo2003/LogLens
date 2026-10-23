@@ -10,6 +10,58 @@ Theoretical and empirical comparison of Naive, KMP, and Rabin-Karp.
 
 {% block content %}
 
+<style>
+    @media print {
+        @page {
+            size: A4 landscape;
+            margin: 12mm;
+        }
+
+        body {
+            background: #ffffff !important;
+            color: #111827 !important;
+            font-size: 9pt !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .sidebar,
+        .sidebar-overlay,
+        .topbar,
+        .no-print {
+            display: none !important;
+        }
+
+        .main-wrapper {
+            min-height: 0 !important;
+            margin-left: 0 !important;
+        }
+
+        .content {
+            max-width: none !important;
+            padding: 0 !important;
+        }
+
+        .loglens-card {
+            box-shadow: none !important;
+            break-inside: avoid-page;
+        }
+
+        .table-responsive {
+            overflow: visible !important;
+        }
+
+        table {
+            font-size: 8pt !important;
+        }
+
+        a {
+            color: inherit !important;
+            text-decoration: none !important;
+        }
+    }
+</style>
+
 {% if error_message %}
 
 <div class="alert alert-danger d-flex align-items-start gap-3">
@@ -27,6 +79,23 @@ Theoretical and empirical comparison of Naive, KMP, and Rabin-Karp.
 </div>
 
 {% elif analysis %}
+
+<div class="d-flex justify-content-end mb-3 no-print">
+    <div>
+        <button
+            type="button"
+            class="btn btn-primary"
+            onclick="window.print()"
+            aria-label="Print or save the complete benchmark report as PDF"
+        >
+            <i class="bi bi-filetype-pdf me-2" aria-hidden="true"></i>
+            Download PDF
+        </button>
+        <div class="form-text text-end">
+            Choose “Save as PDF” in your browser’s print dialog.
+        </div>
+    </div>
+</div>
 
 <!-- =========================================================
          BENCHMARK SUMMARY
@@ -528,7 +597,7 @@ Theoretical and empirical comparison of Naive, KMP, and Rabin-Karp.
         </h2>
 
         <p class="text-secondary small mb-0">
-            Relative timing derived from persisted benchmark medians.
+            Median total time, scaled to the slowest algorithm. Shorter bars are faster.
         </p>
 
     </div>
@@ -538,13 +607,14 @@ Theoretical and empirical comparison of Naive, KMP, and Rabin-Karp.
 
         {% for item in analysis.algorithms %}
 
-        <div class="mb-4">
+        <div class="benchmark-report-chart-row mb-4">
 
             <div class="d-flex justify-content-between align-items-center mb-2">
 
                 <span class="fw-semibold">
                     {{ item.display_name }}
                 </span>
+                {% if forloop.first %}<span class="badge text-bg-success ms-2">Fastest</span>{% endif %}
 
                 <span class="small text-secondary">
                     {{ item.total_median_seconds|floatformat:6 }} s
@@ -553,14 +623,15 @@ Theoretical and empirical comparison of Naive, KMP, and Rabin-Karp.
             </div>
 
 
-            <div class="progress" role="progressbar" aria-label="{{ item.display_name }} relative benchmark time"
+            <div class="benchmark-chart-track progress" role="progressbar" aria-label="{{ item.display_name }} relative benchmark time"
                 aria-valuemin="0" aria-valuemax="100"
                 aria-valuenow="{% widthratio item.total_median_seconds analysis.algorithms.2.total_median_seconds 100 %}"
+                aria-valuetext="{{ item.total_median_seconds|floatformat:8 }} seconds; lower is faster"
                 style="height: 8px;">
 
                 {% if analysis.algorithms.2.total_median_seconds %}
 
-                <div class="progress-bar"
+                <div class="progress-bar {% if item.algorithm == 'kmp' %}bg-success{% elif item.algorithm == 'rabin_karp' %}bg-info{% else %}bg-warning{% endif %}"
                     data-width="{% widthratio item.total_median_seconds analysis.algorithms.2.total_median_seconds 100 %}%"
                     aria-label="{{ item.display_name }} benchmark percentage"></div>
 

@@ -164,6 +164,20 @@ class BenchmarkWorkflowTests(TestCase):
             "rabin_karp",
         )
 
+        self.assertContains(
+            response,
+            "Median search time by algorithm",
+        )
+        comparison_rows = response.context["comparison_rows"]
+        self.assertEqual(
+            [row["rank"] for row in comparison_rows],
+            [1, 2, 3],
+        )
+        self.assertEqual(
+            [row["search_median_seconds"] for row in comparison_rows],
+            sorted(row["search_median_seconds"] for row in comparison_rows),
+        )
+
     def test_user_cannot_select_another_users_source_file(self):
         other_source_file = SourceFile.objects.create(
             workspace=self.other_workspace,

@@ -97,6 +97,7 @@ class SearchRun(models.Model):
     class Status(models.TextChoices):
         SUCCEEDED = "succeeded", "Succeeded"
         FAILED = "failed", "Failed"
+        CANCELLED = "cancelled", "Cancelled"
 
     workspace = models.ForeignKey(
         Workspace,
@@ -108,6 +109,7 @@ class SearchRun(models.Model):
         on_delete=models.CASCADE,
         related_name="search_runs",
     )
+    saved_search = models.ForeignKey("search.SavedSearch", null=True, blank=True, on_delete=models.SET_NULL, related_name="runs")
     source_file = models.ForeignKey(
         "ingestion.SourceFile",
         on_delete=models.SET_NULL,
@@ -131,6 +133,7 @@ class SearchRun(models.Model):
         choices=UNICODE_NORMALIZATION_CHOICES,
         default="none",
     )
+    level_filter = models.CharField(max_length=10, blank=True)
     source_checksum = models.CharField(max_length=64, blank=True)
     status = models.CharField(
         max_length=20,
@@ -152,6 +155,59 @@ class SearchRun(models.Model):
 
     def __str__(self):
         return f"Search #{self.pk} — {self.pattern!r} — {self.algorithm}"
+
+    @property
+    def duration_seconds(self):
+        if self.completed_at is None:
+            return None
+        return max(0.0, (self.completed_at - self.created_at).total_seconds())
+
+
+class SearchBatch(models.Model):
+    """Asynchronous, cancellable matrix of files and literal patterns."""
+
+    class Status(models.TextChoices):
+        QUEUED = "queued", "Queued"
+        RUNNING = "running", "Running"
+        SUCCEEDED = "succeeded", "Succeeded"
+        FAILED = "failed", "Failed"
+        CANCEL_REQUESTED = "cancel_requested", "Cancellation requested"
+        CANCELLED = "cancelled", "Cancelled"
+
+    workspace = models.ForeignKey(Workspace, on_delete=models.CASCADE, related_name="search_batches")
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="search_batches")
+    algorithm = models.CharField(max_length=50)
+    case_sensitive = models.BooleanField(default=True)
+    unicode_normalization = models.CharField(max_length=4, choices=UNICODE_NORMALIZATION_CHOICES, default="none")
+    level_filter = models.CharField(max_length=10, blank=True)
+    status = models.CharField(max_length=24, choices=Status.choices, default=Status.QUEUED)
+    total_items = models.PositiveIntegerField(default=0)
+    completed_items = models.PositiveIntegerField(default=0)
+    celery_task_id = models.CharField(max_length=255, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+
+class SearchBatchItem(models.Model):
+    class Status(models.TextChoices):
+        QUEUED = "queued", "Queued"
+        RUNNING = "running", "Running"
+        SUCCEEDED = "succeeded", "Succeeded"
+        FAILED = "failed", "Failed"
+        CANCELLED = "cancelled", "Cancelled"
+
+    batch = models.ForeignKey(SearchBatch, on_delete=models.CASCADE, related_name="items")
+    source_file = models.ForeignKey("ingestion.SourceFile", on_delete=models.CASCADE, related_name="search_batch_items")
+    pattern = models.TextField()
+    status = models.CharField(max_length=16, choices=Status.choices, default=Status.QUEUED)
+    search_run = models.ForeignKey(SearchRun, null=True, blank=True, on_delete=models.SET_NULL, related_name="batch_items")
+
+    class Meta:
+        ordering = ["source_file__original_name", "id"]
+        constraints = [models.UniqueConstraint(fields=["batch", "source_file", "pattern"], name="unique_batch_file_pattern")]
 
 
 class MatchResult(models.Model):

@@ -110,6 +110,7 @@ def search_source_file(
     algorithm: str,
     case_sensitive: bool = True,
     unicode_normalization: str = "none",
+    level_filter: str = "",
 ) -> list[SegmentSearchResult]:
     """
     Search all extracted segments belonging to one SourceFile.
@@ -122,6 +123,8 @@ def search_source_file(
         .select_related("source_file")
         .order_by("sequence")
     )
+    if level_filter:
+        segments = segments.filter(text__icontains=level_filter)
 
     return search_text_segments(
         segments,

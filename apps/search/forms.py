@@ -24,12 +24,11 @@ class SearchRunForm(forms.Form):
         ),
     )
 
-    source_file = forms.ModelChoiceField(
+    source_files = forms.ModelMultipleChoiceField(
         queryset=SourceFile.objects.none(),
-        label="Source file",
-        empty_label="Select an extracted source file",
-        widget=forms.Select(
-            attrs={"class": "form-select"}
+        label="Source files",
+        widget=forms.SelectMultiple(
+            attrs={"class": "form-select", "size": "6"}
         ),
     )
 
@@ -37,10 +36,11 @@ class SearchRunForm(forms.Form):
         label="Literal pattern",
         max_length=1000,
         required=False,
-        widget=forms.TextInput(
+        widget=forms.Textarea(
             attrs={
                 "class": "form-control",
-                "placeholder": "Example: ERROR",
+                "placeholder": "One literal pattern per line, e.g. ERROR\\nWARN",
+                "rows": 4,
                 "autocomplete": "off",
             }
         ),
@@ -77,6 +77,13 @@ class SearchRunForm(forms.Form):
         ),
     )
 
+    level_filter = forms.ChoiceField(
+        label="Log level filter",
+        choices=[("", "All levels"), ("ERROR", "ERROR"), ("WARN", "WARN"), ("INFO", "INFO"), ("DEBUG", "DEBUG")],
+        required=False,
+        widget=forms.Select(attrs={"class": "form-select"}),
+    )
+
     def __init__(self, *args, user=None, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -89,7 +96,7 @@ class SearchRunForm(forms.Form):
             .order_by("name")
         )
 
-        self.fields["source_file"].queryset = (
+        self.fields["source_files"].queryset = (
             SourceFile.objects
             .filter(
                 owner=user,
@@ -106,7 +113,11 @@ class SearchRunForm(forms.Form):
         )
 
     def clean_pattern(self):
-        return self.cleaned_data.get("pattern", "").strip()
+        raw = self.cleaned_data.get("pattern", "")
+        patterns = list(dict.fromkeys(line.strip() for line in raw.splitlines() if line.strip()))
+        if len(patterns) > 20:
+            raise forms.ValidationError("Enter no more than 20 patterns per search batch.")
+        return patterns
 
     def clean_unicode_normalization(self):
         return self.cleaned_data.get("unicode_normalization") or "none"
@@ -125,21 +136,21 @@ class SearchRunForm(forms.Form):
         cleaned_data = super().clean()
 
         workspace = cleaned_data.get("workspace")
-        source_file = cleaned_data.get("source_file")
-        pattern = cleaned_data.get("pattern", "")
+        source_files = cleaned_data.get("source_files")
+        patterns = cleaned_data.get("pattern", [])
         indicator_rule = cleaned_data.get("indicator_rule")
 
-        if not pattern and indicator_rule is None:
-            self.add_error("pattern", "Enter a literal pattern or select an indicator rule.")
-        elif pattern and indicator_rule is not None:
+        if not patterns and indicator_rule is None:
+            self.add_error("pattern", "Enter at least one literal pattern or select an indicator rule.")
+        elif patterns and indicator_rule is not None:
             self.add_error("indicator_rule", "Choose either a custom pattern or an indicator rule, not both.")
 
-        if workspace is not None and source_file is not None:
-            if source_file.workspace_id != workspace.id:
-                raise forms.ValidationError(
-                    "The selected source file does not belong "
-                    "to the selected workspace."
-                )
+        if workspace is not None and source_files is not None:
+            if any(source_file.workspace_id != workspace.id for source_file in source_files):
+                raise forms.ValidationError("Every selected source file must belong to the selected workspace.")
+            requested_patterns = len(patterns) or (1 if indicator_rule is not None else 0)
+            if len(source_files) * requested_patterns > 100:
+                raise forms.ValidationError("A search batch can contain at most 100 file/pattern combinations.")
 
         if workspace is not None and indicator_rule is not None:
             if indicator_rule.workspace_id != workspace.id:

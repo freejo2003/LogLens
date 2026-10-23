@@ -332,6 +332,16 @@ class BenchmarkExportWorkflowTests(TestCase):
         )
         self.client.force_login(self.user)
 
+    def test_benchmark_report_includes_print_to_pdf_button(self):
+        response = self.client.get(
+            reverse("reports:analysis", args=[self.benchmark.pk])
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Download PDF")
+        self.assertContains(response, "window.print()")
+        self.assertContains(response, "@media print")
+
     def test_benchmark_json_export_contains_methodology_and_memory(self):
         response = self.client.get(
             reverse("reports:export-json", args=[self.benchmark.pk])

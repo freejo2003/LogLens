@@ -4,6 +4,7 @@ from django.urls import reverse
 
 from apps.accounts.services import ANALYST_ROLE, REVIEWER_ROLE, assign_role
 from apps.workspaces.models import Workspace
+from apps.workspaces.models import WorkspaceReviewer
 
 
 class WorkspaceCreationTests(TestCase):
@@ -38,3 +39,13 @@ class WorkspaceCreationTests(TestCase):
         )
         self.assertEqual(response.status_code, 403)
         self.assertFalse(Workspace.objects.exists())
+
+    def test_owner_can_share_workspace_with_reviewer(self):
+        workspace = Workspace.objects.create(name="Reviewable", owner=self.analyst)
+        self.client.force_login(self.analyst)
+        response = self.client.post(
+            reverse("workspace-share", args=[workspace.pk]),
+            {"reviewer": self.reviewer.pk},
+        )
+        self.assertRedirects(response, reverse("workspace-share", args=[workspace.pk]))
+        self.assertTrue(WorkspaceReviewer.objects.filter(workspace=workspace, reviewer=self.reviewer).exists())

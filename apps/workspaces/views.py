@@ -1,13 +1,13 @@
 ﻿from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
 
 from apps.benchmarks.models import BenchmarkRun
 from apps.ingestion.models import SourceFile
 from apps.search.models import SearchRun
 
-from .models import Workspace
-from .forms import WorkspaceForm
+from .models import Workspace, WorkspaceReviewer
+from .forms import WorkspaceForm, ReviewerShareForm
 from apps.accounts.permissions import analyst_required
 from apps.accounts.audit import record_event
 from apps.accounts.models import AuditEvent
@@ -107,3 +107,20 @@ def create_workspace(request):
     else:
         form = WorkspaceForm()
     return render(request, "workspaces/create.html", {"form": form})
+
+
+@login_required
+@analyst_required
+def share_workspace(request, workspace_id):
+    workspace = get_object_or_404(Workspace, pk=workspace_id, owner=request.user)
+    form = ReviewerShareForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        reviewer = form.cleaned_data["reviewer"]
+        WorkspaceReviewer.objects.get_or_create(workspace=workspace, reviewer=reviewer)
+        record_event(actor=request.user, workspace=workspace, action=AuditEvent.Action.WORKSPACE_SHARED,
+                     object_type="Workspace", object_id=workspace.pk,
+                     details={"shared_with_reviewer_id": reviewer.pk, "access": "read_only"})
+        messages.success(request, f"Workspace shared with Reviewer {reviewer.username}.")
+        return redirect("workspace-share", workspace_id=workspace.pk)
+    shares = workspace.reviewer_shares.select_related("reviewer").order_by("reviewer__username")
+    return render(request, "workspaces/share.html", {"workspace": workspace, "form": form, "shares": shares})

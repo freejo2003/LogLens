@@ -18,3 +18,14 @@ class Workspace(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class WorkspaceReviewer(models.Model):
+    """Explicit read-only sharing of a workspace with a Reviewer account."""
+
+    workspace = models.ForeignKey(Workspace, on_delete=models.CASCADE, related_name="reviewer_shares")
+    reviewer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="workspace_shares")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["workspace", "reviewer"], name="unique_workspace_reviewer_share")]
