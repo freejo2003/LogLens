@@ -16,7 +16,6 @@ from apps.search.services.normalization import normalize_search_text
 
 DEFAULT_WARMUP_RUNS = 3
 DEFAULT_TRIALS = 10
-DEFAULT_MAX_NAIVE_COMPARISONS = 5_000_000
 DEFAULT_MAX_SEARCH_MATCHES = 100_000
 
 
@@ -268,7 +267,6 @@ def benchmark_algorithm(
     *,
     warmup_runs: int = DEFAULT_WARMUP_RUNS,
     trials: int = DEFAULT_TRIALS,
-    max_naive_comparisons: int | None = DEFAULT_MAX_NAIVE_COMPARISONS,
     max_matches: int | None = DEFAULT_MAX_SEARCH_MATCHES,
     case_sensitive: bool = True,
     unicode_normalization: str = "none",
@@ -302,16 +300,6 @@ def benchmark_algorithm(
         case_sensitive=case_sensitive,
         unicode_normalization=unicode_normalization,
     )
-    estimated_naive_comparisons = len(searchable_text) * len(searchable_pattern)
-    if (
-        algorithm == "naive"
-        and max_naive_comparisons is not None
-        and estimated_naive_comparisons > max_naive_comparisons
-    ):
-        raise ValueError(
-            "This benchmark exceeds the configured Naive work limit. Narrow the source text or shorten the pattern."
-        )
-
     # Warm-up phase.
     #
     # Warm-ups execute the same complete workflow that is measured:
@@ -511,7 +499,6 @@ def benchmark_all(
     *,
     warmup_runs: int = DEFAULT_WARMUP_RUNS,
     trials: int = DEFAULT_TRIALS,
-    max_naive_comparisons: int | None = DEFAULT_MAX_NAIVE_COMPARISONS,
     max_matches: int | None = DEFAULT_MAX_SEARCH_MATCHES,
     case_sensitive: bool = True,
     unicode_normalization: str = "none",
@@ -536,7 +523,6 @@ def benchmark_all(
             pattern,
             warmup_runs=warmup_runs,
             trials=trials,
-            max_naive_comparisons=max_naive_comparisons,
             max_matches=max_matches,
             case_sensitive=case_sensitive,
             unicode_normalization=unicode_normalization,

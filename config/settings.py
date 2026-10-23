@@ -186,9 +186,6 @@ MAX_PDF_PAGES = bounded_int("LOGLENS_MAX_PDF_PAGES", 1000, minimum=1, maximum=10
 DOC_CONVERSION_TIMEOUT = bounded_int(
     "LOGLENS_DOC_CONVERSION_TIMEOUT", 60, minimum=1, maximum=300
 )
-MAX_NAIVE_COMPARISONS = bounded_int(
-    "LOGLENS_MAX_NAIVE_COMPARISONS", 5_000_000, minimum=1, maximum=100_000_000
-)
 MAX_SEARCH_MATCHES = bounded_int(
     "LOGLENS_MAX_SEARCH_MATCHES", 100_000, minimum=1, maximum=1_000_000
 )

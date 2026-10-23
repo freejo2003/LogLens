@@ -10,7 +10,7 @@ Naive, KMP, and Rabin–Karp run against the same normalized text and pattern. T
 
 Each algorithm receives three complete warm-up executions, which are excluded from measured values, followed by ten measured trials. Each measured trial times preprocessing, search using prepared state, and the full combined operation. Raw timings and median, minimum, and maximum values are persisted separately for all three phases. The reported spread is the observed min-to-max range; it is not a confidence interval.
 
-Rabin–Karp records candidate hash verifications and false candidates that fail exact string verification. The counters are checked for consistency across trials. Naive is rejected before running when its configured worst-case comparison estimate exceeds `LOGLENS_MAX_NAIVE_COMPARISONS`.
+Rabin–Karp records candidate hash verifications and false candidates that fail exact string verification. The counters are checked for consistency across trials. Naive runs against the full in-memory input without a comparison-work cutoff, so large inputs can take substantially longer.
 
 ## Memory and reproducibility
 

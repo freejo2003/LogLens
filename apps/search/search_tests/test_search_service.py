@@ -204,10 +204,7 @@ class SearchServiceTests(TestCase):
         )
         self.assertEqual(results[0].positions, (0,))
 
-    @override_settings(MAX_NAIVE_COMPARISONS=10)
-    def test_naive_search_rejects_excessive_worst_case_work(self):
-        from apps.search.services.search_service import SearchWorkLimitError
-
+    def test_naive_search_runs_without_a_work_comparison_cap(self):
         segment = TextSegment.objects.create(
             source_file=self.source_file,
             sequence=7,
@@ -216,12 +213,12 @@ class SearchServiceTests(TestCase):
             parser_name="plain_text",
             parser_version="1.1",
         )
-        with self.assertRaises(SearchWorkLimitError):
-            search_text_segments(
-                [segment],
-                pattern="zz",
-                algorithm="naive",
-            )
+        results = search_text_segments(
+            [segment],
+            pattern="zz",
+            algorithm="naive",
+        )
+        self.assertEqual(results, [])
 
     @override_settings(MAX_SEARCH_MATCHES=2)
     def test_search_rejects_excessive_match_results_before_materializing_them(self):

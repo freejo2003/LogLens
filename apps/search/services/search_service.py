@@ -7,10 +7,6 @@ from apps.search.services.matching import run_search
 from apps.search.services.normalization import normalize_search_text
 
 
-class SearchWorkLimitError(ValueError):
-    """Raised when a request would exceed the configured Naive work budget."""
-
-
 @dataclass(frozen=True)
 class SegmentSearchResult:
     """
@@ -58,7 +54,6 @@ def search_text_segments(
         case_sensitive=case_sensitive,
         unicode_normalization=unicode_normalization,
     )
-    estimated_comparisons = 0
     total_matches = 0
 
     for segment in segments:
@@ -67,12 +62,6 @@ def search_text_segments(
             case_sensitive=case_sensitive,
             unicode_normalization=unicode_normalization,
         )
-        if algorithm == "naive":
-            estimated_comparisons += len(searchable_text) * len(normalized_pattern)
-            if estimated_comparisons > settings.MAX_NAIVE_COMPARISONS:
-                raise SearchWorkLimitError(
-                    "This Naive search exceeds the configured work limit. Use KMP or Rabin-Karp, or narrow the source text."
-                )
         match_result = run_search(
             algorithm,
             searchable_text,

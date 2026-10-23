@@ -71,7 +71,6 @@ def create_benchmark_run(
         result = benchmark_all(
             text,
             pattern,
-            max_naive_comparisons=settings.MAX_NAIVE_COMPARISONS,
             max_matches=settings.MAX_SEARCH_MATCHES,
             case_sensitive=case_sensitive,
             unicode_normalization=unicode_normalization,
