@@ -15,7 +15,7 @@ Start from the sample, then replace every local-only value. Keep `.env` out of s
 
 Production settings must include:
 
-- `DJANGO_ENV=production`, `DJANGO_DEBUG=false`, a unique `DJANGO_SECRET_KEY` of at least 50 characters, and the public hostname plus `localhost,127.0.0.1` in `DJANGO_ALLOWED_HOSTS` (the loopback names are needed for internal health checks).
+- `DJANGO_ENV=production`, `DJANGO_DEBUG=false`, a unique `DJANGO_SECRET_KEY` with at least 256 bits of randomness (Render's generated Base64 value is 44 characters), and the public hostname plus `localhost,127.0.0.1` in `DJANGO_ALLOWED_HOSTS` (the loopback names are needed for internal health checks).
 - `DJANGO_CSRF_TRUSTED_ORIGINS=https://<public-hostname>` and a public ingress that overwrites `X-Forwarded-Proto` with `https`, sets `X-Forwarded-For` to the actual client address, preserves the public `Host`, and sends traffic only to the host-local Compose port. The Nginx login endpoint applies a per-client request limit; do not allow clients to reach it around the ingress.
 - `DJANGO_SECURE_SSL_REDIRECT=true`, `DJANGO_SECURE_HSTS_SECONDS=31536000`, `DJANGO_HSTS_INCLUDE_SUBDOMAINS=true`, and `DJANGO_HSTS_PRELOAD=false` unless every subdomain is HTTPS-ready and preload enrollment is an intentional domain-wide decision.
 - Strong, independent `POSTGRES_PASSWORD` and URL-safe `REDIS_PASSWORD` values (for example, generated with `secrets.token_urlsafe(48)`); never reuse the local-only values shown in `.env.example`.

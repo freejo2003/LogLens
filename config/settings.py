@@ -40,8 +40,8 @@ if not SECRET_KEY:
     SECRET_KEY = "development-only-secret-key-do-not-use-in-production"
 if PRODUCTION and SECRET_KEY.startswith("development-only-"):
     raise ValueError("A non-development DJANGO_SECRET_KEY is required in production.")
-if PRODUCTION and len(SECRET_KEY) < 50:
-    raise ValueError("DJANGO_SECRET_KEY must contain at least 50 characters in production.")
+if PRODUCTION and len(SECRET_KEY) < 44:
+    raise ValueError("DJANGO_SECRET_KEY must contain at least 44 characters in production.")
 
 DEBUG = env_bool("DJANGO_DEBUG", default=False)
 if PRODUCTION and DEBUG:
