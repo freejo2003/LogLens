@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from statistics import median
 import tracemalloc
 from time import perf_counter
+from typing import Callable
 
 from apps.search.services.matching import (
     ALGORITHMS,
@@ -17,6 +18,7 @@ from apps.search.services.normalization import normalize_search_text
 DEFAULT_WARMUP_RUNS = 3
 DEFAULT_TRIALS = 10
 DEFAULT_MAX_SEARCH_MATCHES = 100_000
+DEFAULT_CHUNK_LINES = 300
 
 
 @dataclass(frozen=True)
@@ -190,6 +192,7 @@ def _measure_search(
     text: str,
     *,
     max_matches: int | None = None,
+    max_start: int | None = None,
 ) -> tuple[MatchResult, float, int, int]:
     """
     Execute the search phase using already-prepared algorithm state.
@@ -208,6 +211,7 @@ def _measure_search(
             prepared.pattern,
             prepared.state,
             max_matches=max_matches,
+            max_start=max_start,
         )
 
         result = MatchResult(
@@ -224,6 +228,7 @@ def _measure_search(
             prepared,
             text,
             max_matches=max_matches,
+            max_start=max_start,
         )
 
         collision_count = 0
@@ -239,12 +244,95 @@ def _measure_search(
     )
 
 
+def _build_text_chunks(
+    text: str,
+    chunk_lines: int,
+) -> tuple[list[tuple[int, int, int]], int]:
+    """Return (start, end, lines) ranges, preserving line-boundary offsets."""
+    if chunk_lines < 1:
+        raise ValueError("chunk_lines must be greater than zero.")
+
+    total_lines = text.count("\n") + (
+        1 if text and not text.endswith("\n") else 0
+    )
+    if not text:
+        return [(0, 0, 0)], 0
+
+    chunks: list[tuple[int, int, int]] = []
+    chunk_start = 0
+    lines_in_chunk = 0
+    for index, character in enumerate(text):
+        if character != "\n":
+            continue
+        lines_in_chunk += 1
+        if lines_in_chunk == chunk_lines:
+            chunks.append((chunk_start, index + 1, lines_in_chunk))
+            chunk_start = index + 1
+            lines_in_chunk = 0
+
+    if chunk_start < len(text):
+        remaining_lines = total_lines - sum(item[2] for item in chunks)
+        chunks.append((chunk_start, len(text), remaining_lines))
+
+    return chunks, total_lines
+
+
+def _measure_chunked_search(
+    prepared: PreparedSearch,
+    text: str,
+    chunks: list[tuple[int, int, int]],
+    *,
+    max_matches: int | None,
+    progress_callback: Callable[[int], None] | None = None,
+) -> tuple[MatchResult, float, int, int]:
+    """Search line chunks with a pattern-sized lookahead and global offsets."""
+    positions: list[int] = []
+    search_seconds = 0.0
+    collision_count = 0
+    verification_count = 0
+    processed_lines = 0
+    overlap = max(0, len(prepared.pattern) - 1)
+
+    for start, end, lines_processed in chunks:
+        window_end = min(len(text), end + overlap)
+        window = text[start:window_end]
+        remaining_matches = (
+            None if max_matches is None else max_matches - len(positions)
+        )
+        result, elapsed, collisions, verifications = _measure_search(
+            prepared,
+            window,
+            max_matches=remaining_matches,
+            max_start=end - start,
+        )
+        positions.extend(start + position for position in result.positions)
+        search_seconds += elapsed
+        collision_count += collisions
+        verification_count += verifications
+        processed_lines += lines_processed
+
+        if progress_callback is not None:
+            progress_callback(processed_lines)
+
+    return (
+        MatchResult(
+            algorithm=prepared.algorithm,
+            pattern=prepared.pattern,
+            positions=tuple(positions),
+        ),
+        search_seconds,
+        collision_count,
+        verification_count,
+    )
+
+
 def _measure_peak_memory(
     algorithm: str,
     text: str,
     pattern: str,
     *,
     max_matches: int | None,
+    chunks: list[tuple[int, int, int]],
 ) -> int | None:
     """Measure Python-heap peak for one un-timed prepared search pass."""
     if tracemalloc.is_tracing():
@@ -253,7 +341,12 @@ def _measure_peak_memory(
     try:
         tracemalloc.reset_peak()
         prepared = prepare_search(algorithm, pattern)
-        _measure_search(prepared, text, max_matches=max_matches)
+        _measure_chunked_search(
+            prepared,
+            text,
+            chunks,
+            max_matches=max_matches,
+        )
         _current, peak = tracemalloc.get_traced_memory()
         return peak
     finally:
@@ -270,6 +363,8 @@ def benchmark_algorithm(
     max_matches: int | None = DEFAULT_MAX_SEARCH_MATCHES,
     case_sensitive: bool = True,
     unicode_normalization: str = "none",
+    chunk_lines: int = DEFAULT_CHUNK_LINES,
+    progress_callback: Callable[[str, str, int], None] | None = None,
 ) -> AlgorithmBenchmarkResult:
     """
     Benchmark one search algorithm using phase-aware repeated trials.
@@ -300,20 +395,28 @@ def benchmark_algorithm(
         case_sensitive=case_sensitive,
         unicode_normalization=unicode_normalization,
     )
+    chunks, _total_lines = _build_text_chunks(searchable_text, chunk_lines)
     # Warm-up phase.
     #
     # Warm-ups execute the same complete workflow that is measured:
     # preprocessing followed by search.
-    for _ in range(warmup_runs):
+    for warmup_index in range(warmup_runs):
         prepared = prepare_search(
             algorithm,
             searchable_pattern,
         )
 
-        _measure_search(
+        _measure_chunked_search(
             prepared,
             searchable_text,
+            chunks,
             max_matches=max_matches,
+            progress_callback=(
+                lambda lines, phase=f"warm-up {warmup_index + 1}/{warmup_runs}":
+                progress_callback(algorithm, phase, lines)
+                if progress_callback is not None
+                else None
+            ),
         )
 
     preprocessing_trial_times: list[float] = []
@@ -325,9 +428,7 @@ def benchmark_algorithm(
 
     reference_result: MatchResult | None = None
 
-    for _ in range(trials):
-        total_start = perf_counter()
-
+    for trial_index in range(trials):
         (
             prepared,
             preprocessing_seconds,
@@ -341,13 +442,20 @@ def benchmark_algorithm(
             search_seconds,
             collision_count,
             verification_count,
-        ) = _measure_search(
+        ) = _measure_chunked_search(
             prepared,
             searchable_text,
+            chunks,
             max_matches=max_matches,
+            progress_callback=(
+                lambda lines, phase=f"trial {trial_index + 1}/{trials}":
+                progress_callback(algorithm, phase, lines)
+                if progress_callback is not None
+                else None
+            ),
         )
 
-        total_seconds = perf_counter() - total_start
+        total_seconds = preprocessing_seconds + search_seconds
 
         preprocessing_trial_times.append(
             preprocessing_seconds
@@ -426,6 +534,7 @@ def benchmark_algorithm(
         searchable_text,
         searchable_pattern,
         max_matches=max_matches,
+        chunks=chunks,
     )
 
     if any(
@@ -502,6 +611,8 @@ def benchmark_all(
     max_matches: int | None = DEFAULT_MAX_SEARCH_MATCHES,
     case_sensitive: bool = True,
     unicode_normalization: str = "none",
+    chunk_lines: int = DEFAULT_CHUNK_LINES,
+    progress_callback: Callable[[dict], None] | None = None,
 ) -> BenchmarkResult:
     """
     Benchmark all configured algorithms using identical benchmark
@@ -516,6 +627,37 @@ def benchmark_all(
         trials,
     )
 
+    chunks, total_lines = _build_text_chunks(
+        normalize_search_text(
+            text,
+            case_sensitive=case_sensitive,
+            unicode_normalization=unicode_normalization,
+        ),
+        chunk_lines,
+    )
+    total_units = len(chunks) * len(ALGORITHMS) * (warmup_runs + trials)
+    completed_units = 0
+
+    def report_progress(
+        algorithm: str,
+        phase: str,
+        lines_processed: int,
+    ) -> None:
+        nonlocal completed_units
+        completed_units += 1
+        if progress_callback is not None:
+            progress_callback(
+                {
+                    "algorithm": algorithm,
+                    "phase": phase,
+                    "lines_processed": lines_processed,
+                    "total_lines": total_lines,
+                    "completed_units": completed_units,
+                    "total_units": total_units,
+                    "percent": min(99, int(completed_units * 99 / total_units)),
+                }
+            )
+
     results = tuple(
         benchmark_algorithm(
             algorithm,
@@ -526,6 +668,8 @@ def benchmark_all(
             max_matches=max_matches,
             case_sensitive=case_sensitive,
             unicode_normalization=unicode_normalization,
+            chunk_lines=chunk_lines,
+            progress_callback=report_progress,
         )
         for algorithm in ALGORITHMS
     )

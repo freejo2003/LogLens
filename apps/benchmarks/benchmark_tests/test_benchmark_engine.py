@@ -389,6 +389,27 @@ class BenchmarkEngineTests(SimpleTestCase):
                 (0, 1, 2),
             )
 
+    def test_chunked_benchmark_preserves_matches_across_log_boundaries(self):
+        progress = []
+        result = benchmark_all(
+            "ab\nab\nab\nab\n",
+            "b\na",
+            warmup_runs=0,
+            trials=1,
+            chunk_lines=2,
+            progress_callback=progress.append,
+        )
+
+        self.assertTrue(result.positions_consistent)
+        for algorithm_result in result.results:
+            self.assertEqual(algorithm_result.positions, (1, 4, 7))
+        self.assertEqual(len(progress), 6)
+        self.assertEqual(
+            [event["lines_processed"] for event in progress],
+            [2, 4, 2, 4, 2, 4],
+        )
+        self.assertEqual(progress[-1]["percent"], 99)
+
     def test_benchmark_enforces_match_result_cap(self):
         with self.assertRaises(SearchMatchLimitError):
             benchmark_all(

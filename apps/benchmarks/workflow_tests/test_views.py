@@ -1,9 +1,12 @@
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
+from unittest.mock import patch
 
 from apps.accounts.services import ANALYST_ROLE, assign_role
 from apps.benchmarks.models import AlgorithmMetric, BenchmarkRun
+from apps.benchmarks.services.benchmark_persistence import create_benchmark_run
+from apps.benchmarks.services.benchmark_persistence import create_pending_benchmark_run
 from apps.ingestion.models import SourceFile, TextSegment
 from apps.workspaces.models import Workspace
 
@@ -97,11 +100,25 @@ class BenchmarkWorkflowTests(TestCase):
             "benchmark.log",
         )
 
-    def test_authenticated_user_can_run_benchmark(self):
+    @patch("apps.benchmarks.views.queue_source_benchmark")
+    def test_authenticated_user_can_run_benchmark(self, queue_benchmark):
         self.client.login(
             username="benchmark-user",
             password="test-password",
         )
+
+        def run_benchmark(**kwargs):
+            return create_benchmark_run(
+                workspace=kwargs["source_file"].workspace,
+                owner=kwargs["owner"],
+                text="INFO startup\nERROR database\nERROR database",
+                pattern=kwargs["pattern"],
+                source_file=kwargs["source_file"],
+                case_sensitive=kwargs["case_sensitive"],
+                unicode_normalization=kwargs["unicode_normalization"],
+            )
+
+        queue_benchmark.side_effect = run_benchmark
 
         response = self.client.post(
             reverse("benchmarks:run"),
@@ -112,7 +129,7 @@ class BenchmarkWorkflowTests(TestCase):
             },
         )
 
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 302)
 
         benchmark = BenchmarkRun.objects.get(
             owner=self.user,
@@ -149,8 +166,9 @@ class BenchmarkWorkflowTests(TestCase):
             3,
         )
 
-        self.assertContains(
-            response,
+        response = self.client.get(response["Location"])
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response,
             "naive",
         )
 
@@ -177,6 +195,48 @@ class BenchmarkWorkflowTests(TestCase):
             [row["search_median_seconds"] for row in comparison_rows],
             sorted(row["search_median_seconds"] for row in comparison_rows),
         )
+
+    def test_benchmark_page_shows_live_progress_for_pending_run(self):
+        self.client.login(username="benchmark-user", password="test-password")
+        benchmark = create_pending_benchmark_run(
+            workspace=self.workspace,
+            owner=self.user,
+            text="INFO startup\nERROR database\nERROR database",
+            pattern="ERROR",
+            source_file=self.source_file,
+        )
+
+        response = self.client.get(
+            reverse("benchmarks:run"),
+            {"run": benchmark.pk},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Benchmark in progress")
+        self.assertContains(response, "Queued for benchmarking.")
+
+    def test_progress_endpoint_is_owner_scoped(self):
+        self.client.login(username="benchmark-user", password="test-password")
+        benchmark = create_pending_benchmark_run(
+            workspace=self.workspace,
+            owner=self.user,
+            text="ERROR\n",
+            pattern="ERROR",
+            source_file=self.source_file,
+        )
+
+        response = self.client.get(
+            reverse("benchmarks:progress", args=[benchmark.pk])
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], BenchmarkRun.Status.PENDING)
+
+        self.client.logout()
+        self.client.login(username="other-user", password="test-password")
+        response = self.client.get(
+            reverse("benchmarks:progress", args=[benchmark.pk])
+        )
+        self.assertEqual(response.status_code, 404)
 
     def test_user_cannot_select_another_users_source_file(self):
         other_source_file = SourceFile.objects.create(

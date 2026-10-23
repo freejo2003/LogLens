@@ -1,9 +1,13 @@
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
+from unittest.mock import patch
 
 from apps.accounts.services import ANALYST_ROLE, assign_role
-from apps.benchmarks.models import AlgorithmMetric, BenchmarkRun
+from apps.benchmarks.models import BenchmarkRun
+from apps.benchmarks.services.benchmark_persistence import (
+    create_pending_benchmark_run,
+)
 from apps.ingestion.models import SourceFile, TextSegment
 from apps.workspaces.models import Workspace
 
@@ -96,10 +100,21 @@ class BenchmarkWorkflowTests(TestCase):
             "benchmark.log",
         )
 
-    def test_authenticated_user_can_run_benchmark(self):
+    @patch("apps.benchmarks.views.queue_source_benchmark")
+    def test_authenticated_user_can_start_benchmark(self, queue_benchmark):
         self.client.login(
             username="benchmark-user",
             password="test-password",
+        )
+
+        queue_benchmark.side_effect = lambda **kwargs: create_pending_benchmark_run(
+            workspace=kwargs["source_file"].workspace,
+            owner=kwargs["owner"],
+            text="INFO startup\nERROR database\nERROR database",
+            pattern=kwargs["pattern"],
+            source_file=kwargs["source_file"],
+            case_sensitive=kwargs["case_sensitive"],
+            unicode_normalization=kwargs["unicode_normalization"],
         )
 
         response = self.client.post(
@@ -111,7 +126,7 @@ class BenchmarkWorkflowTests(TestCase):
             },
         )
 
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 302)
 
         benchmark = BenchmarkRun.objects.get(
             owner=self.user,
@@ -134,33 +149,14 @@ class BenchmarkWorkflowTests(TestCase):
 
         self.assertEqual(
             benchmark.status,
-            BenchmarkRun.Status.SUCCEEDED,
+            BenchmarkRun.Status.PENDING,
         )
 
-        self.assertTrue(
-            benchmark.positions_consistent,
-        )
-
-        self.assertEqual(
-            AlgorithmMetric.objects.filter(
-                benchmark_run=benchmark,
-            ).count(),
-            3,
-        )
-
+        response = self.client.get(response["Location"])
+        self.assertEqual(response.status_code, 200)
         self.assertContains(
             response,
-            "naive",
-        )
-
-        self.assertContains(
-            response,
-            "kmp",
-        )
-
-        self.assertContains(
-            response,
-            "rabin_karp",
+            "Benchmark in progress",
         )
 
     def test_user_cannot_select_another_users_source_file(self):

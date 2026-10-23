@@ -9,7 +9,7 @@ The repository includes a Render Blueprint at `render.yaml`. It creates one Djan
 - The blueprint selects Render's free web and PostgreSQL plans. Free PostgreSQL has a 1 GB limit, no backups, and expires after 30 days. Treat the database as disposable demo data; export anything you need to keep. [Render free service limits](https://render.com/docs/free)
 - The free web service may sleep when idle and has limited CPU and memory. Gunicorn uses one worker with two request threads and a five-minute timeout so a long benchmark does not immediately block health checks or get killed at 60 seconds. Larger Naive benchmarks can still exceed the free instance's available compute; use a larger plan or run them locally if they do not finish within five minutes.
 - Uploaded originals are stored on the service's local filesystem. They can disappear on restart or redeploy. The separate database keeps extracted records, but an original may be unavailable afterward.
-- Extraction/search work executes inline rather than in the background, so requests may take longer and long work can time out. This setup is for a short demonstration, not production.
+- Extraction/search work executes inline rather than in a durable worker. Benchmarks use a single in-process background thread and report progress in 300-line chunks; only one benchmark can run at a time. A service restart interrupts that run and marks it failed, so it must be started again. The free instance still has limited CPU and memory, and this setup is for a short demonstration, not production.
 - SMTP credentials are not configured in this demo. Outbound email features are therefore not ready to use.
 
 ## Create the Render services

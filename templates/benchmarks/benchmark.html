@@ -19,7 +19,7 @@
             </p>
         </div>
 
-        {% if benchmark %}
+        {% if benchmark and benchmark.status == "succeeded" %}
             <a
                 href="{% url 'reports:analysis' benchmark.id %}"
                 class="btn btn-outline-primary"
@@ -180,7 +180,30 @@
 
     {% if benchmark %}
 
+        {% if benchmark.status == "pending" or benchmark.status == "running" %}
+            <section
+                id="benchmark-live-progress"
+                class="loglens-card mb-4 p-4"
+                data-progress-url="{% url 'benchmarks:progress' benchmark.pk %}"
+                aria-live="polite"
+            >
+                <div class="d-flex justify-content-between align-items-center gap-3 mb-2">
+                    <h2 class="h5 mb-0">Benchmark in progress</h2>
+                    <span id="benchmark-progress-percent" class="fw-semibold">{{ benchmark.progress_percent }}%</span>
+                </div>
+                <div class="progress mb-3" role="progressbar" aria-label="Benchmark progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ benchmark.progress_percent }}">
+                    <div id="benchmark-progress-bar" class="progress-bar progress-bar-striped progress-bar-animated" style="width: {{ benchmark.progress_percent }}%"></div>
+                </div>
+                <p id="benchmark-progress-message" class="loglens-muted mb-0">{{ benchmark.progress_message|default:"Starting benchmark…" }}</p>
+            </section>
+        {% elif benchmark.status == "failed" %}
+            <div class="alert alert-danger" role="alert">
+                <strong>Benchmark did not finish.</strong>
+                {{ benchmark.error_message }}
+            </div>
+        {% endif %}
 
+        {% if benchmark.status == "succeeded" %}
         <!-- =====================================================
              BENCHMARK SUMMARY
              ===================================================== -->
@@ -1188,6 +1211,7 @@
         </div>
 
 
+        {% endif %}
     {% endif %}
 <script>
 
@@ -1203,6 +1227,42 @@
         .forEach(function (input) {
             input.classList.add("form-control");
         });
+
+    (function pollBenchmarkProgress() {
+        const panel = document.getElementById("benchmark-live-progress");
+        if (!panel) return;
+
+        const message = document.getElementById("benchmark-progress-message");
+        const progressBar = document.getElementById("benchmark-progress-bar");
+        const percent = document.getElementById("benchmark-progress-percent");
+        const progressTrack = panel.querySelector('[role="progressbar"]');
+
+        async function refreshProgress() {
+            try {
+                const response = await fetch(panel.dataset.progressUrl, {
+                    credentials: "same-origin",
+                    headers: { "Accept": "application/json" }
+                });
+                if (!response.ok) throw new Error("Progress check failed.");
+                const state = await response.json();
+
+                progressBar.style.width = state.percent + "%";
+                progressTrack.setAttribute("aria-valuenow", state.percent);
+                percent.textContent = state.percent + "%";
+                message.textContent = state.message || "Benchmark is running…";
+
+                if (state.status === "succeeded" || state.status === "failed") {
+                    window.location.reload();
+                    return;
+                }
+            } catch (_error) {
+                message.textContent = "Progress connection interrupted; retrying…";
+            }
+            window.setTimeout(refreshProgress, 750);
+        }
+
+        window.setTimeout(refreshProgress, 500);
+    })();
 
 </script>
 

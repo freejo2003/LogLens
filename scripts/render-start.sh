@@ -2,6 +2,7 @@
 set -eu
 
 python manage.py migrate --noinput
+python manage.py recover_interrupted_benchmarks
 
 if [ "${LOGLENS_BOOTSTRAP_SUPERUSER:-false}" = "true" ]; then
     python manage.py bootstrap_superuser

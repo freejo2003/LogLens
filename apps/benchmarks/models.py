@@ -68,6 +68,11 @@ class BenchmarkRun(models.Model):
         blank=True,
     )
 
+    progress_percent = models.PositiveSmallIntegerField(default=0)
+    progress_message = models.CharField(max_length=255, blank=True)
+    progress_lines_processed = models.PositiveIntegerField(default=0)
+    progress_total_lines = models.PositiveIntegerField(default=0)
+
     created_at = models.DateTimeField(
         auto_now_add=True,
     )

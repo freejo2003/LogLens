@@ -67,7 +67,11 @@ def _append_match(positions: list[int], position: int, max_matches: int | None) 
 
 
 def naive_search(
-    text: str, pattern: str, *, max_matches: int | None = None
+    text: str,
+    pattern: str,
+    *,
+    max_matches: int | None = None,
+    max_start: int | None = None,
 ) -> list[int]:
     """
     Find all occurrences of pattern in text using the Naive
@@ -89,7 +93,11 @@ def naive_search(
 
     positions: list[int] = []
 
-    for start in range(text_length - pattern_length + 1):
+    candidate_count = text_length - pattern_length + 1
+    if max_start is not None:
+        candidate_count = min(candidate_count, max(0, max_start))
+
+    for start in range(candidate_count):
         match = True
 
         for offset in range(pattern_length):
@@ -139,6 +147,7 @@ def kmp_search_prepared(
     lps: list[int],
     *,
     max_matches: int | None = None,
+    max_start: int | None = None,
 ) -> list[int]:
     """
     Execute KMP search using an already prepared LPS table.
@@ -160,7 +169,9 @@ def kmp_search_prepared(
             pattern_index += 1
 
             if pattern_index == len(pattern):
-                _append_match(positions, text_index - pattern_index, max_matches)
+                match_start = text_index - pattern_index
+                if max_start is None or match_start < max_start:
+                    _append_match(positions, match_start, max_matches)
 
                 # Continue searching so overlapping matches are found.
                 pattern_index = lps[pattern_index - 1]
@@ -235,6 +246,7 @@ def _rabin_karp_search_prepared(
     prepared_state: tuple[int, int, int],
     *,
     max_matches: int | None = None,
+    max_start: int | None = None,
 ) -> RabinKarpSearchResult:
     """
     Execute Rabin-Karp using already prepared pattern state.
@@ -272,7 +284,11 @@ def _rabin_karp_search_prepared(
     collision_count = 0
     verification_count = 0
 
-    for start in range(text_length - pattern_length + 1):
+    candidate_count = text_length - pattern_length + 1
+    if max_start is not None:
+        candidate_count = min(candidate_count, max(0, max_start))
+
+    for start in range(candidate_count):
         if window_hash == pattern_hash:
             verification_count += 1
 
@@ -283,7 +299,7 @@ def _rabin_karp_search_prepared(
             else:
                 collision_count += 1
 
-        if start < text_length - pattern_length:
+        if start < candidate_count - 1:
             outgoing = ord(text[start])
             incoming = ord(
                 text[start + pattern_length]
@@ -374,6 +390,7 @@ def search_prepared(
     text: str,
     *,
     max_matches: int | None = None,
+    max_start: int | None = None,
 ) -> MatchResult:
     """
     Execute a prepared search.
@@ -388,6 +405,7 @@ def search_prepared(
             text,
             pattern,
             max_matches=max_matches,
+            max_start=max_start,
         )
 
     elif algorithm == "kmp":
@@ -396,6 +414,7 @@ def search_prepared(
             pattern,
             prepared.state,
             max_matches=max_matches,
+            max_start=max_start,
         )
 
     elif algorithm == "rabin_karp":
@@ -404,6 +423,7 @@ def search_prepared(
             pattern,
             prepared.state,
             max_matches=max_matches,
+            max_start=max_start,
         )
         positions = list(detailed_result.positions)
 

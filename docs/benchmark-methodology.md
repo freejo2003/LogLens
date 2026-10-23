@@ -8,7 +8,7 @@ Naive, KMP, and Rabin–Karp run against the same normalized text and pattern. T
 
 ## Timing
 
-Each algorithm receives three complete warm-up executions, which are excluded from measured values, followed by ten measured trials. Each measured trial times preprocessing, search using prepared state, and the full combined operation. Raw timings and median, minimum, and maximum values are persisted separately for all three phases. The reported spread is the observed min-to-max range; it is not a confidence interval.
+Each algorithm receives three complete warm-up executions, which are excluded from measured values, followed by ten measured trials. Large inputs are scanned in 300-line chunks with a pattern-length lookahead; eligible match starts are assigned to one chunk so matches crossing chunk boundaries are counted once. Each measured trial times preprocessing once and sums the prepared search time across chunks. Progress/persistence work is excluded from algorithm timings. Raw timings and median, minimum, and maximum values are persisted separately for all three phases. The reported spread is the observed min-to-max range; it is not a confidence interval.
 
 Rabin–Karp records candidate hash verifications and false candidates that fail exact string verification. The counters are checked for consistency across trials. Naive runs against the full in-memory input without a comparison-work cutoff, so large inputs can take substantially longer.
 

@@ -25,6 +25,40 @@ def calculate_input_checksum(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
+def create_pending_benchmark_run(
+    *,
+    workspace,
+    owner,
+    text: str,
+    pattern: str,
+    source_file=None,
+    case_sensitive: bool = True,
+    unicode_normalization: str = "none",
+) -> BenchmarkRun:
+    if workspace.owner_id != owner.id:
+        raise PermissionError("The selected workspace does not belong to the current user.")
+    if source_file is not None and source_file.owner_id != owner.id:
+        raise PermissionError("The source file does not belong to the current user.")
+
+    line_count = text.count("\n") + (1 if text and not text.endswith("\n") else 0)
+    return BenchmarkRun.objects.create(
+        workspace=workspace,
+        owner=owner,
+        source_file=source_file,
+        pattern=pattern,
+        case_sensitive=case_sensitive,
+        unicode_normalization=unicode_normalization,
+        python_version=platform.python_version(),
+        platform_name=platform.platform(),
+        source_checksum=source_file.checksum if source_file is not None else "",
+        input_checksum=calculate_input_checksum(text),
+        text_length=len(text),
+        status=BenchmarkRun.Status.PENDING,
+        progress_total_lines=line_count,
+        progress_message="Queued for benchmarking.",
+    )
+
+
 def create_benchmark_run(
     *,
     workspace,
@@ -34,6 +68,8 @@ def create_benchmark_run(
     source_file=None,
     case_sensitive: bool = True,
     unicode_normalization: str = "none",
+    benchmark: BenchmarkRun | None = None,
+    progress_callback=None,
 ) -> BenchmarkRun:
     if workspace.owner_id != owner.id:
         raise PermissionError(
@@ -52,20 +88,25 @@ def create_benchmark_run(
 
         source_checksum = source_file.checksum
 
-    benchmark = BenchmarkRun.objects.create(
-        workspace=workspace,
-        owner=owner,
-        source_file=source_file,
-        pattern=pattern,
-        case_sensitive=case_sensitive,
-        unicode_normalization=unicode_normalization,
-        python_version=platform.python_version(),
-        platform_name=platform.platform(),
-        source_checksum=source_checksum,
-        input_checksum=input_checksum,
-        text_length=len(text),
-        status=BenchmarkRun.Status.RUNNING,
-    )
+    if benchmark is None:
+        benchmark = BenchmarkRun.objects.create(
+            workspace=workspace,
+            owner=owner,
+            source_file=source_file,
+            pattern=pattern,
+            case_sensitive=case_sensitive,
+            unicode_normalization=unicode_normalization,
+            python_version=platform.python_version(),
+            platform_name=platform.platform(),
+            source_checksum=source_checksum,
+            input_checksum=input_checksum,
+            text_length=len(text),
+            status=BenchmarkRun.Status.RUNNING,
+        )
+    else:
+        benchmark.status = BenchmarkRun.Status.RUNNING
+        benchmark.progress_message = "Starting benchmark."
+        benchmark.save(update_fields=["status", "progress_message"])
 
     try:
         result = benchmark_all(
@@ -74,17 +115,24 @@ def create_benchmark_run(
             max_matches=settings.MAX_SEARCH_MATCHES,
             case_sensitive=case_sensitive,
             unicode_normalization=unicode_normalization,
+            progress_callback=progress_callback,
         )
 
         with transaction.atomic():
             benchmark.positions_consistent = result.positions_consistent
             benchmark.status = BenchmarkRun.Status.SUCCEEDED
+            benchmark.progress_percent = 100
+            benchmark.progress_message = "Benchmark complete."
+            benchmark.progress_lines_processed = benchmark.progress_total_lines
             benchmark.completed_at = timezone.now()
 
             benchmark.save(
                 update_fields=[
                     "positions_consistent",
                     "status",
+                    "progress_percent",
+                    "progress_message",
+                    "progress_lines_processed",
                     "completed_at",
                 ]
             )
@@ -203,6 +251,7 @@ def create_benchmark_run(
 
     except Exception as exc:
         benchmark.status = BenchmarkRun.Status.FAILED
+        benchmark.progress_message = "Benchmark failed."
         benchmark.error_message = "The benchmark could not be completed. Try again or contact an administrator."
         benchmark.completed_at = timezone.now()
 
@@ -210,6 +259,7 @@ def create_benchmark_run(
             update_fields=[
                 "status",
                 "error_message",
+                "progress_message",
                 "completed_at",
             ]
         )

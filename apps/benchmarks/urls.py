@@ -11,4 +11,9 @@ urlpatterns = [
         views.benchmark_workspace,
         name="run",
     ),
+    path(
+        "runs/<int:benchmark_id>/progress/",
+        views.benchmark_progress,
+        name="progress",
+    ),
 ]
