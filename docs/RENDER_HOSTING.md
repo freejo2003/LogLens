@@ -18,7 +18,7 @@ The repository includes a Render Blueprint at `render.yaml`. It creates one Djan
 2. In Render, create a Blueprint from that repository. Review the proposed services: `loglens-web` and `loglens-db`, both on the free plan in Oregon.
 3. Create the Blueprint. Render generates `DJANGO_SECRET_KEY` and connects the web service to PostgreSQL over the private network.
 4. Wait for the web service to build and deploy. It runs migrations and `collectstatic`, starts Gunicorn on Render's assigned port, and reports readiness through `/health/`.
-5. Open the web service's `onrender.com` URL and create the first admin account through the app's admin flow. Confirm CSS and JavaScript load, sign-in works, and a small upload extracts successfully.
+5. If Render Shell is unavailable, add temporary `LOGLENS_BOOTSTRAP_SUPERUSER=true`, `DJANGO_SUPERUSER_USERNAME`, `DJANGO_SUPERUSER_EMAIL`, and `DJANGO_SUPERUSER_PASSWORD` environment variables to the web service. The startup script creates the account once; remove all four variables after the service is live. The bootstrap command never changes an existing account. Then sign in at `/admin/` and confirm CSS and JavaScript load, sign-in works, and a small upload extracts successfully.
 
 The app automatically trusts the `RENDER_EXTERNAL_HOSTNAME` for `ALLOWED_HOSTS` and CSRF. If adding a custom domain, set `DJANGO_ALLOWED_HOSTS` to include it and `DJANGO_CSRF_TRUSTED_ORIGINS` to its full `https://` origin. HTTPS redirect and secure cookies are enabled in production.
 
