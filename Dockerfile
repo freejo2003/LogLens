@@ -28,3 +28,5 @@ COPY --chown=loglens:loglens . /app
 USER loglens:loglens
 EXPOSE 8000
 
+CMD ["/bin/sh", "/app/scripts/render-start.sh"]
+
