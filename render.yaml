@@ -6,6 +6,7 @@ services:
     region: oregon
     dockerfilePath: ./Dockerfile
     dockerContext: .
+    dockerCommand: /bin/sh /app/scripts/render-start.sh
     healthCheckPath: /health/
     autoDeploy: true
     envVars:
